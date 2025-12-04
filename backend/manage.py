@@ -3,6 +3,8 @@
 import os
 import sys
 
+sys.path.append('/path/to/directory/containing/api')
+import api
 
 def main():
     """Run administrative tasks."""

@@ -12,6 +12,11 @@ import TeacherDashboard from './pages/TeacherDashboard';
 import CreateClass from './pages/CreateClass';
 import CreateAssignment from './pages/CreateAssignment';
 import StudentsList from './pages/StudentsList';
+import ClassManagement from './pages/admin/ClassManagement';
+import UserManagement from './pages/admin/UserManagement';
+import GroupManagement from './pages/admin/GroupManagement';
+import BulkOperations from './pages/admin/BulkOperations';
+import AdminRoute from './components/AdminRoute';
 
 function App() {
     return (
@@ -25,7 +30,13 @@ function App() {
                             <Route path="/practice" element={<Practice />} />
                             <Route path="/login" element={<Login />} />
                             <Route path="/admin" element={<AdminLogin />} />
-                            <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                            <Route element={<AdminRoute />}>
+                                <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                                <Route path="/admin/classes" element={<ClassManagement />} />
+                                <Route path="/admin/users" element={<UserManagement />} />
+                                <Route path="/admin/groups" element={<GroupManagement />} />
+                                <Route path="/admin/bulk" element={<BulkOperations />} />
+                            </Route>
                             <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
                             <Route path="/teacher/classes/create" element={<CreateClass />} />
                             <Route path="/teacher/assignments/create" element={<CreateAssignment />} />
