@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import {
     Container, Box, Card, CardContent, TextField, Button,
     Typography, Alert, CircularProgress
@@ -13,6 +13,7 @@ const AdminLogin = () => {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
+    const { adminLogin } = useAuth();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -20,15 +21,7 @@ const AdminLogin = () => {
         setLoading(true);
 
         try {
-            const response = await axios.post('http://localhost:8000/api/auth/admin/login/', {
-                username,
-                password
-            });
-
-            localStorage.setItem('accessToken', response.data.tokens.access);
-            localStorage.setItem('refreshToken', response.data.tokens.refresh);
-            localStorage.setItem('user', JSON.stringify(response.data.user));
-
+            await adminLogin(username, password);
             navigate('/admin/dashboard');
         } catch (err) {
             console.error("Login error:", err);

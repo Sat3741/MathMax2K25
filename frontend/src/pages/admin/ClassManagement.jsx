@@ -1,167 +1,442 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
-    Container, Typography, Box, Card, CardContent, Grid, Button, 
-    Dialog, DialogTitle, DialogContent, DialogActions, TextField,
-    IconButton, Collapse, List, ListItem, ListItemText, Chip
+    Container, Typography, Box, Card, Button, TextField, 
+    Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
+    IconButton, Alert, Collapse, Chip, InputAdornment
 } from '@mui/material';
-import { Add, ExpandMore, ExpandLess, Delete, Edit } from '@mui/icons-material';
+import { Add, Delete, Save, Cancel, Edit, ExpandMore, ExpandLess, Search } from '@mui/icons-material';
+import axios from 'axios';
 
 const ClassManagement = () => {
-    // Mock Data
-    const [classes, setClasses] = useState([
-        { id: 1, name: 'Class 6', sections: [{ id: 101, name: 'A' }, { id: 102, name: 'B' }] },
-        { id: 2, name: 'Class 7', sections: [{ id: 103, name: 'A' }] },
-    ]);
-
-    const [openClassDialog, setOpenClassDialog] = useState(false);
-    const [openSectionDialog, setOpenSectionDialog] = useState(false);
-    const [selectedClassId, setSelectedClassId] = useState(null);
-    const [newClassName, setNewClassName] = useState('');
-    const [newSectionName, setNewSectionName] = useState('');
+    const [classes, setClasses] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+    const [isAdding, setIsAdding] = useState(false);
+    const [editingId, setEditingId] = useState(null);
+    const [editingSectionId, setEditingSectionId] = useState(null);
     const [expandedClass, setExpandedClass] = useState(null);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [newClass, setNewClass] = useState({
+        name: '',
+        grade_level: '',
+        class_teacher_name: ''
+    });
+    const [editData, setEditData] = useState({
+        name: '',
+        grade_level: '',
+        class_teacher_name: ''
+    });
+    const [editSectionData, setEditSectionData] = useState({
+        section_teacher: ''
+    });
+    const [students, setStudents] = useState([]);
 
-    const handleAddClass = () => {
-        if (newClassName.trim()) {
-            setClasses([...classes, { id: Date.now(), name: newClassName, sections: [] }]);
-            setNewClassName('');
-            setOpenClassDialog(false);
+    useEffect(() => {
+        fetchClasses();
+        fetchStudents();
+    }, []);
+
+    const fetchClasses = async () => {
+        try {
+            const token = localStorage.getItem('accessToken');
+            const response = await axios.get('http://localhost:8000/api/auth/classes/', {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setClasses(response.data);
+        } catch (err) {
+            console.error('Failed to fetch classes:', err);
+            setError('Failed to load classes');
+        } finally {
+            setLoading(false);
         }
     };
 
-    const handleAddSection = () => {
-        if (newSectionName.trim() && selectedClassId) {
-            setClasses(classes.map(cls => {
-                if (cls.id === selectedClassId) {
-                    return { ...cls, sections: [...cls.sections, { id: Date.now(), name: newSectionName }] };
-                }
-                return cls;
+    const fetchStudents = async () => {
+        try {
+            const token = localStorage.getItem('accessToken');
+            const response = await axios.get('http://localhost:8000/api/auth/users/', {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const mappedUsers = response.data.map(user => ({
+                ...user,
+                class: user.class_field || user.grade_level || '-',
+                phone: user.phone || user.phone_number || '-',
+                section: user.section || '-'
             }));
-            setNewSectionName('');
-            setOpenSectionDialog(false);
+            setStudents(mappedUsers.filter(u => u.is_student));
+        } catch (err) {
+            console.error('Failed to fetch students:', err);
         }
     };
 
-    const handleDeleteClass = (id) => {
-        setClasses(classes.filter(cls => cls.id !== id));
+    const getStudentsInSection = (gradeLevel, sectionName) => {
+        const sectionStudents = students.filter(s => 
+            s.grade_level === gradeLevel && s.section === sectionName
+        );
+        
+        if (searchQuery.trim()) {
+            return sectionStudents.filter(s =>
+                s.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                s.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                s.phone?.toLowerCase().includes(searchQuery.toLowerCase())
+            );
+        }
+        return sectionStudents;
     };
 
-    const handleDeleteSection = (classId, sectionId) => {
-        setClasses(classes.map(cls => {
-            if (cls.id === classId) {
-                return { ...cls, sections: cls.sections.filter(sec => sec.id !== sectionId) };
+    const handleAddClass = async () => {
+        if (newClass.name.trim() && newClass.grade_level) {
+            try {
+                const token = localStorage.getItem('accessToken');
+                await axios.post('http://localhost:8000/api/auth/classes/', {
+                    name: newClass.name,
+                    grade_level: parseInt(newClass.grade_level),
+                    class_teacher_name: newClass.class_teacher_name,
+                    description: ''
+                }, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                setNewClass({ name: '', grade_level: '', class_teacher_name: '' });
+                setIsAdding(false);
+                fetchClasses();
+            } catch (err) {
+                console.error('Failed to create class:', err);
+                setError('Failed to create class');
             }
-            return cls;
-        }));
+        }
+    };
+
+    const handleEditClass = async (id) => {
+        try {
+            const token = localStorage.getItem('accessToken');
+            await axios.put(`http://localhost:8000/api/auth/classes/${id}/`, {
+                name: editData.name,
+                grade_level: parseInt(editData.grade_level),
+                class_teacher_name: editData.class_teacher_name,
+                description: ''
+            }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setEditingId(null);
+            fetchClasses();
+        } catch (err) {
+            console.error('Failed to update class:', err);
+            setError('Failed to update class');
+        }
+    };
+
+    const handleEditSection = async (sectionId) => {
+        try {
+            const token = localStorage.getItem('accessToken');
+            await axios.patch(`http://localhost:8000/api/auth/sections/${sectionId}/`, {
+                section_teacher: editSectionData.section_teacher
+            }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setEditingSectionId(null);
+            fetchClasses();
+        } catch (err) {
+            console.error('Failed to update section:', err);
+            setError('Failed to update section');
+        }
+    };
+
+    const handleDeleteClass = async (id) => {
+        if (window.confirm('Are you sure you want to delete this class?')) {
+            try {
+                const token = localStorage.getItem('accessToken');
+                await axios.delete(`http://localhost:8000/api/auth/classes/${id}/`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                fetchClasses();
+            } catch (err) {
+                console.error('Failed to delete class:', err);
+                setError('Failed to delete class');
+            }
+        }
+    };
+
+    const startEdit = (classItem) => {
+        setEditingId(classItem.id);
+        setEditData({
+            name: classItem.name,
+            grade_level: classItem.grade_level,
+            class_teacher_name: classItem.class_teacher_name || ''
+        });
+    };
+
+    const startEditSection = (section) => {
+        setEditingSectionId(section.id);
+        setEditSectionData({
+            section_teacher: section.section_teacher || ''
+        });
+    };
+
+    const toggleExpand = (classId) => {
+        setExpandedClass(expandedClass === classId ? null : classId);
     };
 
     return (
         <Container maxWidth="lg" sx={{ py: 4 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
                 <Typography variant="h4" fontWeight="bold">
-                    Class & Section Management
+                    Classes & Sections
                 </Typography>
                 <Button 
                     variant="contained" 
                     startIcon={<Add />}
-                    onClick={() => setOpenClassDialog(true)}
+                    onClick={() => setIsAdding(true)}
+                    disabled={isAdding}
                 >
                     Add Class
                 </Button>
             </Box>
-            
-            <Grid container spacing={3}>
-                {classes.map((cls) => (
-                    <Grid item xs={12} md={6} key={cls.id}>
-                        <Card>
-                            <CardContent>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <Typography variant="h6" fontWeight="bold">
-                                        {cls.name}
-                                    </Typography>
-                                    <Box>
-                                        <IconButton onClick={() => {
-                                            setSelectedClassId(cls.id);
-                                            setOpenSectionDialog(true);
-                                        }}>
-                                            <Add color="primary" />
-                                        </IconButton>
-                                        <IconButton onClick={() => handleDeleteClass(cls.id)}>
-                                            <Delete color="error" />
-                                        </IconButton>
-                                        <IconButton onClick={() => setExpandedClass(expandedClass === cls.id ? null : cls.id)}>
-                                            {expandedClass === cls.id ? <ExpandLess /> : <ExpandMore />}
-                                        </IconButton>
-                                    </Box>
+
+            {/* Search Bar */}
+            <Card sx={{ mb: 3, p: 2 }}>
+                <TextField
+                    fullWidth
+                    placeholder="Search students by name, username, or phone..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    InputProps={{
+                        startAdornment: (
+                            <InputAdornment position="start">
+                                <Search />
+                            </InputAdornment>
+                        ),
+                    }}
+                />
+            </Card>
+
+            {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
+
+            {/* Add Class Form */}
+            {isAdding && (
+                <Card sx={{ mb: 3, p: 3 }}>
+                    <Typography variant="h6" gutterBottom>Add New Class</Typography>
+                    <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                        <TextField 
+                            label="Class Name"
+                            placeholder="e.g., Class 9"
+                            value={newClass.name}
+                            onChange={(e) => setNewClass({...newClass, name: e.target.value})}
+                        />
+                        <TextField 
+                            label="Grade Level"
+                            type="number"
+                            placeholder="e.g., 9"
+                            value={newClass.grade_level}
+                            onChange={(e) => setNewClass({...newClass, grade_level: e.target.value})}
+                        />
+                        <TextField 
+                            label="Class Teacher"
+                            placeholder="Teacher Name"
+                            value={newClass.class_teacher_name}
+                            onChange={(e) => setNewClass({...newClass, class_teacher_name: e.target.value})}
+                        />
+                    </Box>
+                    <Box sx={{ display: 'flex', gap: 2 }}>
+                        <Button variant="contained" startIcon={<Save />} onClick={handleAddClass}>
+                            Save Class
+                        </Button>
+                        <Button variant="outlined" startIcon={<Cancel />} onClick={() => setIsAdding(false)}>
+                            Cancel
+                        </Button>
+                    </Box>
+                </Card>
+            )}
+
+            {/* Classes List */}
+            {classes.map((classItem) => (
+                <Card key={classItem.id} sx={{ mb: 3 }}>
+                    <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: 'action.hover' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <IconButton onClick={() => toggleExpand(classItem.id)}>
+                                {expandedClass === classItem.id ? <ExpandLess /> : <ExpandMore />}
+                            </IconButton>
+                            {editingId === classItem.id ? (
+                                <Box sx={{ display: 'flex', gap: 2 }}>
+                                    <TextField 
+                                        size="small"
+                                        value={editData.name}
+                                        onChange={(e) => setEditData({...editData, name: e.target.value})}
+                                    />
+                                    <TextField 
+                                        size="small"
+                                        type="number"
+                                        value={editData.grade_level}
+                                        onChange={(e) => setEditData({...editData, grade_level: e.target.value})}
+                                    />
+                                    <TextField 
+                                        size="small"
+                                        value={editData.class_teacher_name}
+                                        onChange={(e) => setEditData({...editData, class_teacher_name: e.target.value})}
+                                        placeholder="Teacher Name"
+                                    />
                                 </Box>
-                                
-                                <Collapse in={expandedClass === cls.id} timeout="auto" unmountOnExit>
-                                    <Box sx={{ mt: 2 }}>
-                                        <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                                            Sections ({cls.sections.length})
-                                        </Typography>
-                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                                            {cls.sections.map((sec) => (
-                                                <Chip 
-                                                    key={sec.id} 
-                                                    label={sec.name} 
-                                                    onDelete={() => handleDeleteSection(cls.id, sec.id)}
-                                                    color="default"
-                                                    variant="outlined"
-                                                />
-                                            ))}
-                                            {cls.sections.length === 0 && (
-                                                <Typography variant="body2" color="text.secondary" fontStyle="italic">
-                                                    No sections yet
-                                                </Typography>
-                                            )}
-                                        </Box>
-                                    </Box>
-                                </Collapse>
-                            </CardContent>
-                        </Card>
-                    </Grid>
-                ))}
-            </Grid>
+                            ) : (
+                                <>
+                                    <Typography variant="h6">{classItem.name}</Typography>
+                                    <Chip label={`Grade ${classItem.grade_level}`} color="primary" size="small" />
+                                    {classItem.class_teacher_name && (
+                                        <Chip label={`Class Teacher: ${classItem.class_teacher_name}`} color="secondary" size="small" />
+                                    )}
+                                    <Chip label={`${classItem.section_count || 0} Sections`} size="small" />
+                                </>
+                            )}
+                        </Box>
+                        <Box>
+                            {editingId === classItem.id ? (
+                                <>
+                                    <IconButton color="primary" onClick={() => handleEditClass(classItem.id)}>
+                                        <Save />
+                                    </IconButton>
+                                    <IconButton color="error" onClick={() => setEditingId(null)}>
+                                        <Cancel />
+                                    </IconButton>
+                                </>
+                            ) : (
+                                <>
+                                    <IconButton onClick={() => startEdit(classItem)}>
+                                        <Edit color="primary" />
+                                    </IconButton>
+                                    <IconButton onClick={() => handleDeleteClass(classItem.id)}>
+                                        <Delete color="error" />
+                                    </IconButton>
+                                </>
+                            )}
+                        </Box>
+                    </Box>
 
-            {/* Add Class Dialog */}
-            <Dialog open={openClassDialog} onClose={() => setOpenClassDialog(false)}>
-                <DialogTitle>Add New Class</DialogTitle>
-                <DialogContent>
-                    <TextField
-                        autoFocus
-                        margin="dense"
-                        label="Class Name"
-                        fullWidth
-                        value={newClassName}
-                        onChange={(e) => setNewClassName(e.target.value)}
-                        placeholder="e.g. Class 8"
-                    />
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setOpenClassDialog(false)}>Cancel</Button>
-                    <Button onClick={handleAddClass} variant="contained">Add</Button>
-                </DialogActions>
-            </Dialog>
+                    {/* Sections */}
+                    <Collapse in={expandedClass === classItem.id}>
+                        <Box sx={{ p: 2 }}>
+                            {classItem.sections && classItem.sections.length > 0 ? (
+                                classItem.sections.map((section) => {
+                                    const sectionStudents = getStudentsInSection(classItem.grade_level, section.name);
+                                    const displayTeacher = section.section_teacher || classItem.class_teacher_name || 'Not assigned';
+                                    
+                                    return (
+                                        <Card key={section.id} sx={{ mb: 2, border: '1px solid', borderColor: 'divider' }}>
+                                            <Box sx={{ p: 2, bgcolor: 'primary.main', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flex: 1 }}>
+                                                    <Typography variant="h6">Section {section.name}</Typography>
+                                                    {editingSectionId === section.id ? (
+                                                        <TextField 
+                                                            size="small"
+                                                            value={editSectionData.section_teacher}
+                                                            onChange={(e) => setEditSectionData({section_teacher: e.target.value})}
+                                                            placeholder="Section Teacher"
+                                                            sx={{ 
+                                                                bgcolor: '#ffffff',
+                                                                borderRadius: 1,
+                                                                '& .MuiInputBase-input': {
+                                                                    color: '#000',
+                                                                    fontWeight: 700
+                                                                },
+                                                                '& .MuiOutlinedInput-notchedOutline': {
+                                                                    borderColor: '#d97706'
+                                                                }
+                                                            }}
+                                                        />
+                                                    ) : (
+                                                        <Chip 
+                                                            label={`Teacher: ${displayTeacher}`} 
+                                                            size="small"
+                                                            sx={{ 
+                                                                bgcolor: '#fbbf24', 
+                                                                color: '#000',
+                                                                fontWeight: 600
+                                                            }}
+                                                        />
+                                                    )}
+                                                    <Chip 
+                                                        label={`${sectionStudents.length} Students`} 
+                                                        size="small"
+                                                        sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white' }}
+                                                    />
+                                                </Box>
+                                                <Box>
+                                                    {editingSectionId === section.id ? (
+                                                        <>
+                                                            <IconButton 
+                                                                onClick={() => handleEditSection(section.id)}
+                                                                sx={{ color: 'white' }}
+                                                            >
+                                                                <Save />
+                                                            </IconButton>
+                                                            <IconButton 
+                                                                onClick={() => setEditingSectionId(null)}
+                                                                sx={{ color: 'white' }}
+                                                            >
+                                                                <Cancel />
+                                                            </IconButton>
+                                                        </>
+                                                    ) : (
+                                                        <IconButton 
+                                                            onClick={() => startEditSection(section)}
+                                                            sx={{ color: 'white' }}
+                                                        >
+                                                            <Edit />
+                                                        </IconButton>
+                                                    )}
+                                                </Box>
+                                            </Box>
+                                            <TableContainer>
+                                                <Table size="small">
+                                                    <TableHead>
+                                                        <TableRow>
+                                                            <TableCell><strong>Name</strong></TableCell>
+                                                            <TableCell><strong>Username</strong></TableCell>
+                                                            <TableCell><strong>Phone</strong></TableCell>
+                                                            <TableCell><strong>Role</strong></TableCell>
+                                                        </TableRow>
+                                                    </TableHead>
+                                                    <TableBody>
+                                                        {sectionStudents.length > 0 ? (
+                                                            sectionStudents.map((student) => (
+                                                                <TableRow key={student.id}>
+                                                                    <TableCell>{student.name}</TableCell>
+                                                                    <TableCell>
+                                                                        <Typography variant="body2" sx={{ fontFamily: 'monospace', color: 'primary.main' }}>
+                                                                            {student.username}
+                                                                        </Typography>
+                                                                    </TableCell>
+                                                                    <TableCell>{student.phone}</TableCell>
+                                                                    <TableCell>
+                                                                        <Chip label={student.role} size="small" color="default" />
+                                                                    </TableCell>
+                                                                </TableRow>
+                                                            ))
+                                                        ) : (
+                                                            <TableRow>
+                                                                <TableCell colSpan={4} align="center" sx={{ py: 3 }}>
+                                                                    <Typography color="text.secondary">
+                                                                        {searchQuery ? 'No students match your search' : 'No students in this section'}
+                                                                    </Typography>
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        )}
+                                                    </TableBody>
+                                                </Table>
+                                            </TableContainer>
+                                        </Card>
+                                    );
+                                })
+                            ) : (
+                                <Alert severity="info">No sections created yet. Create sections from User Management.</Alert>
+                            )}
+                        </Box>
+                    </Collapse>
+                </Card>
+            ))}
 
-            {/* Add Section Dialog */}
-            <Dialog open={openSectionDialog} onClose={() => setOpenSectionDialog(false)}>
-                <DialogTitle>Add Section</DialogTitle>
-                <DialogContent>
-                    <TextField
-                        autoFocus
-                        margin="dense"
-                        label="Section Name"
-                        fullWidth
-                        value={newSectionName}
-                        onChange={(e) => setNewSectionName(e.target.value)}
-                        placeholder="e.g. A, B, Rose"
-                    />
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setOpenSectionDialog(false)}>Cancel</Button>
-                    <Button onClick={handleAddSection} variant="contained">Add</Button>
-                </DialogActions>
-            </Dialog>
+            {classes.length === 0 && !isAdding && (
+                <Card sx={{ p: 4, textAlign: 'center' }}>
+                    <Typography color="text.secondary">No classes found. Click "Add Class" to create one.</Typography>
+                </Card>
+            )}
         </Container>
     );
 };

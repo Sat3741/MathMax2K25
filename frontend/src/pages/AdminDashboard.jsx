@@ -1,5 +1,7 @@
-import { Container, Typography, Grid, Card, CardContent, Box, useTheme } from '@mui/material';
+import { useState, useEffect } from 'react';
+import { Container, Typography, Grid, Card, CardContent, Box, useTheme, CircularProgress } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import { 
     People, Class, Groups, CloudUpload, Settings, 
     TrendingUp, AssignmentInd 
@@ -8,6 +10,12 @@ import {
 const AdminDashboard = () => {
     const navigate = useNavigate();
     const theme = useTheme();
+    const [stats, setStats] = useState({
+        total_students: 0,
+        total_teachers: 0,
+        active_classes: 0
+    });
+    const [loading, setLoading] = useState(true);
 
     const menuItems = [
         {
@@ -39,6 +47,23 @@ const AdminDashboard = () => {
             color: theme.palette.warning.main
         }
     ];
+
+    useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                const token = localStorage.getItem('accessToken');
+                const response = await axios.get('http://localhost:8000/api/auth/dashboard/stats/', {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                setStats(response.data);
+            } catch (err) {
+                console.error('Failed to fetch stats:', err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchStats();
+    }, []);
 
     return (
         <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -97,7 +122,11 @@ const AdminDashboard = () => {
                         <Card>
                             <CardContent>
                                 <Typography color="text.secondary" gutterBottom>Total Students</Typography>
-                                <Typography variant="h3" fontWeight="bold">0</Typography>
+                                {loading ? (
+                                    <CircularProgress size={40} />
+                                ) : (
+                                    <Typography variant="h3" fontWeight="bold">{stats.total_students}</Typography>
+                                )}
                             </CardContent>
                         </Card>
                     </Grid>
@@ -105,7 +134,11 @@ const AdminDashboard = () => {
                         <Card>
                             <CardContent>
                                 <Typography color="text.secondary" gutterBottom>Total Teachers</Typography>
-                                <Typography variant="h3" fontWeight="bold">0</Typography>
+                                {loading ? (
+                                    <CircularProgress size={40} />
+                                ) : (
+                                    <Typography variant="h3" fontWeight="bold">{stats.total_teachers}</Typography>
+                                )}
                             </CardContent>
                         </Card>
                     </Grid>
@@ -113,7 +146,11 @@ const AdminDashboard = () => {
                         <Card>
                             <CardContent>
                                 <Typography color="text.secondary" gutterBottom>Active Classes</Typography>
-                                <Typography variant="h3" fontWeight="bold">0</Typography>
+                                {loading ? (
+                                    <CircularProgress size={40} />
+                                ) : (
+                                    <Typography variant="h3" fontWeight="bold">{stats.active_classes}</Typography>
+                                )}
                             </CardContent>
                         </Card>
                     </Grid>

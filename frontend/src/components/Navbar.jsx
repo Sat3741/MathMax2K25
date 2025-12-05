@@ -128,7 +128,7 @@ const Navbar = () => {
                                     </>
                                 )}
 
-                                {isStudent && (
+                                {isStudent && !isAdmin && (
                                     <Button
                                         component={Link}
                                         to="/practice"

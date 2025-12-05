@@ -31,6 +31,20 @@ export const AuthProvider = ({ children }) => {
         return userData;
     };
 
+    const adminLogin = async (username, password) => {
+        const response = await axios.post('http://localhost:8000/api/auth/admin/login/', {
+            username,
+            password
+        });
+
+        const { tokens, user: userData } = response.data;
+        localStorage.setItem('accessToken', tokens.access);
+        localStorage.setItem('refreshToken', tokens.refresh);
+        localStorage.setItem('user', JSON.stringify(userData));
+        setUser(userData);
+        return userData;
+    };
+
     const signup = async (userData) => {
         const response = await axios.post('http://localhost:8000/api/auth/create-user/', userData);
         return response.data;
@@ -46,6 +60,7 @@ export const AuthProvider = ({ children }) => {
     const value = {
         user,
         login,
+        adminLogin,
         signup,
         logout,
         loading,

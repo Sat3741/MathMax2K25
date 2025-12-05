@@ -1,0 +1,6 @@
+username	first_name	last_name	email	role	grade_level	section	phone_number
+student001	John	Doe	john.doe@example.com	student	9	A	1234567890
+student002	Jane	Smith	jane.smith@example.com	student	9	A	2345678901
+student003	Bob	Johnson	bob.johnson@example.com	student	10	B	3456789012
+teacher001	Alice	Williams	alice.williams@example.com	teacher			4567890123
+teacher002	Charlie	Brown	charlie.brown@example.com	teacher			5678901234
