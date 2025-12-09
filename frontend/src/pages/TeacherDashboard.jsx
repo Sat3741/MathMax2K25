@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
+import { getAuthToken } from '../utils/authUtils';
 import {
     Container, Box, Typography, Grid, Card, CardContent, Button,
     List, ListItem, ListItemText, Divider, CircularProgress
@@ -16,8 +17,8 @@ const TeacherDashboard = () => {
     }, []);
 
     const fetchDashboard = async () => {
-        const token = localStorage.getItem('accessToken');
         try {
+            const token = getAuthToken();
             const response = await axios.get('http://localhost:8000/api/teacher/dashboard/', {
                 headers: { Authorization: `Bearer ${token}` }
             });
@@ -101,17 +102,7 @@ const TeacherDashboard = () => {
                         Quick Actions
                     </Typography>
                     <Grid container spacing={2}>
-                        <Grid item xs={12} sm={4}>
-                            <Button
-                                fullWidth
-                                variant="contained"
-                                startIcon={<Add />}
-                                component={Link}
-                                to="/teacher/classes/create"
-                            >
-                                Create Class
-                            </Button>
-                        </Grid>
+
                         <Grid item xs={12} sm={4}>
                             <Button
                                 fullWidth
@@ -153,7 +144,7 @@ const TeacherDashboard = () => {
                                         <Box key={cls.id}>
                                             <ListItem>
                                                 <ListItemText
-                                                    primary={cls.name}
+                                                    primary={cls.display_name || cls.name}
                                                     secondary={`${cls.student_count} students`}
                                                 />
                                             </ListItem>
@@ -184,7 +175,19 @@ const TeacherDashboard = () => {
                                             <ListItem>
                                                 <ListItemText
                                                     primary={assignment.title}
-                                                    secondary={`${assignment.class_name} • ${assignment.topic}`}
+                                                    secondary={
+                                                        <>
+                                                            {`${assignment.class_name} • ${assignment.topic}`}
+                                                            {assignment.due_date && (
+                                                                <>
+                                                                    <br />
+                                                                    <Typography component="span" variant="caption" color="error">
+                                                                        Due: {new Date(assignment.due_date).toLocaleDateString()}
+                                                                    </Typography>
+                                                                </>
+                                                            )}
+                                                        </>
+                                                    }
                                                 />
                                             </ListItem>
                                             {index < dashboard.recent_assignments.length - 1 && <Divider />}

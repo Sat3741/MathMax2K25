@@ -31,7 +31,7 @@ export const ThemeProvider = ({ children }) => {
                     },
                 },
                 typography: {
-                    fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
+                    fontFamily: '"Fredoka", "Inter", "Roboto", "Helvetica", "Arial", sans-serif',
                     h1: {
                         fontWeight: 700,
                     },

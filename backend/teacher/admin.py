@@ -8,7 +8,7 @@ class ClassAdmin(admin.ModelAdmin):
 
 @admin.register(Assignment)
 class AssignmentAdmin(admin.ModelAdmin):
-    list_display = ('title', 'teacher', 'class_assigned', 'topic', 'difficulty', 'due_date')
+    list_display = ('title', 'teacher', 'section_assigned', 'group_assigned', 'topic', 'difficulty', 'due_date')
     list_filter = ('topic', 'difficulty')
 
 @admin.register(StudentProgress)

@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -31,6 +32,7 @@ INSTALLED_APPS = [
     'math_engine',
     'teacher',
     'api',
+    'student',
 ]
 
 MIDDLEWARE = [
@@ -68,14 +70,17 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
+# Database
+# Default to a local SQLite DB for development to avoid requiring PostgreSQL
+# Set environment variable USE_SQLITE=0 to use the PostgreSQL configuration below.
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'mathmax_db',
-        'USER': 'mathmax_user',
-        'PASSWORD': 'mathmax_password',
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'NAME': os.environ.get('POSTGRES_DB', 'mathmax_db'),
+        'USER': os.environ.get('POSTGRES_USER', 'mathmax_user'),
+        'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'mathmax_password'),
+        'HOST': os.environ.get('POSTGRES_HOST', 'localhost'),
+        'PORT': os.environ.get('POSTGRES_PORT', '5432'),
     }
 }
 

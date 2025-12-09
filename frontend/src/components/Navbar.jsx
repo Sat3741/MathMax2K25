@@ -1,8 +1,11 @@
 import { AppBar, Toolbar, Typography, Button, Box, IconButton, Container, useTheme as useMuiTheme } from '@mui/material';
 import { Link, useNavigate } from 'react-router-dom';
-import { Logout, Brightness4, Brightness7, Calculate } from '@mui/icons-material';
+import { LogOut, Moon, Sun, Calculator, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import Avatar from './Avatar';
+import { Menu, MenuItem, ListItemIcon, Divider } from '@mui/material';
+import { useState } from 'react';
 
 const Navbar = () => {
     const navigate = useNavigate();
@@ -10,9 +13,26 @@ const Navbar = () => {
     const { mode, toggleTheme } = useTheme();
     const muiTheme = useMuiTheme();
 
+    const [anchorEl, setAnchorEl] = useState(null);
+    const open = Boolean(anchorEl);
+
+    const handleClick = (event) => {
+        setAnchorEl(event.currentTarget);
+    };
+
+    const handleClose = () => {
+        setAnchorEl(null);
+    };
+
     const handleLogout = () => {
+        handleClose();
         logout();
         navigate('/');
+    };
+
+    const handleProfile = () => {
+        handleClose();
+        navigate('/profile');
     };
 
     return (
@@ -63,7 +83,7 @@ const Navbar = () => {
                                 }
                             }}
                         >
-                            <Calculate sx={{ fontSize: 28, color: 'white' }} />
+                            <Calculator size={28} color='white' />
                         </Box>
                         <Typography
                             variant="h5"
@@ -89,24 +109,11 @@ const Navbar = () => {
                                 }
                             }}
                         >
-                            {mode === 'dark' ? <Brightness7 /> : <Brightness4 />}
+                            {mode === 'dark' ? <Sun /> : <Moon />}
                         </IconButton>
 
                         {isAuthenticated ? (
                             <>
-                                <Typography 
-                                    variant="body2"
-                                    sx={{ 
-                                        display: { xs: 'none', md: 'flex' }, 
-                                        alignItems: 'center', 
-                                        mr: 2, 
-                                        fontWeight: 600,
-                                        color: 'text.secondary'
-                                    }}
-                                >
-                                    Hi, {user?.username}
-                                </Typography>
-
                                 {isTeacher && (
                                     <>
                                         <Button
@@ -116,6 +123,14 @@ const Navbar = () => {
                                             sx={{ fontWeight: 600, display: { xs: 'none', md: 'inline-flex' } }}
                                         >
                                             Dashboard
+                                        </Button>
+                                        <Button
+                                            component={Link}
+                                            to="/teacher/groups"
+                                            color="inherit"
+                                            sx={{ fontWeight: 600, display: { xs: 'none', md: 'inline-flex' } }}
+                                        >
+                                            Groups
                                         </Button>
                                         <Button
                                             component={Link}
@@ -129,14 +144,32 @@ const Navbar = () => {
                                 )}
 
                                 {isStudent && !isAdmin && (
-                                    <Button
-                                        component={Link}
-                                        to="/practice"
-                                        color="inherit"
-                                        sx={{ fontWeight: 600, display: { xs: 'none', md: 'inline-flex' } }}
-                                    >
-                                        Practice
-                                    </Button>
+                                    <>
+                                        <Button
+                                            component={Link}
+                                            to="/student/assignments"
+                                            color="inherit"
+                                            sx={{ fontWeight: 600, display: { xs: 'none', md: 'inline-flex' } }}
+                                        >
+                                            Assignments
+                                        </Button>
+                                        <Button
+                                            component={Link}
+                                            to="/practice"
+                                            color="inherit"
+                                            sx={{ fontWeight: 600, display: { xs: 'none', md: 'inline-flex' } }}
+                                        >
+                                            Practice
+                                        </Button>
+                                        <Button
+                                            component={Link}
+                                            to="/student/dashboard"
+                                            color="inherit"
+                                            sx={{ fontWeight: 600, display: { xs: 'none', md: 'inline-flex' } }}
+                                        >
+                                            Dashboard
+                                        </Button>
+                                    </>
                                 )}
 
                                 {isAdmin && (
@@ -150,19 +183,69 @@ const Navbar = () => {
                                     </Button>
                                 )}
 
-                                <Button
-                                    onClick={handleLogout}
-                                    variant="outlined"
-                                    color="inherit"
-                                    startIcon={<Logout />}
-                                    sx={{
-                                        fontWeight: 600,
-                                        borderRadius: 2,
-                                        ml: 1
+
+
+                                <Box sx={{ ml: 2 }}>
+                                    <IconButton
+                                        onClick={handleClick}
+                                        size="small"
+                                        sx={{ ml: 2 }}
+                                        aria-controls={open ? 'account-menu' : undefined}
+                                        aria-haspopup="true"
+                                        aria-expanded={open ? 'true' : undefined}
+                                    >
+                                        <Avatar user={user} size={40} />
+                                    </IconButton>
+                                </Box>
+                                <Menu
+                                    anchorEl={anchorEl}
+                                    id="account-menu"
+                                    open={open}
+                                    onClose={handleClose}
+                                    onClick={handleClose}
+                                    PaperProps={{
+                                        elevation: 0,
+                                        sx: {
+                                            overflow: 'visible',
+                                            filter: 'drop-shadow(0px 2px 8px rgba(0,0,0,0.32))',
+                                            mt: 1.5,
+                                            '& .MuiAvatar-root': {
+                                                width: 32,
+                                                height: 32,
+                                                ml: -0.5,
+                                                mr: 1,
+                                            },
+                                            '&:before': {
+                                                content: '""',
+                                                display: 'block',
+                                                position: 'absolute',
+                                                top: 0,
+                                                right: 14,
+                                                width: 10,
+                                                height: 10,
+                                                bgcolor: 'background.paper',
+                                                transform: 'translateY(-50%) rotate(45deg)',
+                                                zIndex: 0,
+                                            },
+                                        },
                                     }}
+                                    transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+                                    anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
                                 >
-                                    Logout
-                                </Button>
+                                    <MenuItem onClick={handleProfile}>
+                                        <ListItemIcon>
+                                            <User size={20} />
+                                        </ListItemIcon>
+                                        Profile
+                                    </MenuItem>
+                                    <Divider />
+                                    <MenuItem onClick={handleLogout}>
+                                        <ListItemIcon>
+                                            <LogOut size={20} />
+                                        </ListItemIcon>
+                                        Logout
+                                    </MenuItem>
+                                </Menu>
                             </>
                         ) : (
                             <Button

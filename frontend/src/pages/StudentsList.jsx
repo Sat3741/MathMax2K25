@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { getAuthToken } from '../utils/authUtils';
 import {
     Container,
     Typography,
@@ -23,8 +24,8 @@ const StudentsList = () => {
     }, []);
 
     const fetchStudents = async () => {
-        const token = localStorage.getItem('accessToken');
         try {
+            const token = getAuthToken();
             const response = await axios.get('http://localhost:8000/api/teacher/students/', {
                 headers: { Authorization: `Bearer ${token}` }
             });

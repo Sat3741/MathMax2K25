@@ -9,13 +9,19 @@ import Login from './pages/Login';
 import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
 import TeacherDashboard from './pages/TeacherDashboard';
-import CreateClass from './pages/CreateClass';
+
 import CreateAssignment from './pages/CreateAssignment';
 import StudentsList from './pages/StudentsList';
 import ClassManagement from './pages/admin/ClassManagement';
 import UserManagement from './pages/admin/UserManagement';
 import GroupManagement from './pages/admin/GroupManagement';
 import BulkOperations from './pages/admin/BulkOperations';
+import StudentDashboard from './pages/StudentDashboard';
+import Profile from './pages/Profile';
+import StudentAssignments from './pages/StudentAssignments';
+import TeacherGroupManagement from './pages/TeacherGroupManagement';
+import PracticeResults from './pages/PracticeResults';
+import LevelInfo from './pages/LevelInfo';
 import AdminRoute from './components/AdminRoute';
 
 function App() {
@@ -28,6 +34,11 @@ function App() {
                         <Routes>
                             <Route path="/" element={<Home />} />
                             <Route path="/practice" element={<Practice />} />
+                            <Route path="/practice/results" element={<PracticeResults />} />
+                            <Route path="/level-info" element={<LevelInfo />} />
+                            <Route path="/student/dashboard" element={<StudentDashboard />} />
+                            <Route path="/student/assignments" element={<StudentAssignments />} />
+                            <Route path="/profile" element={<Profile />} />
                             <Route path="/login" element={<Login />} />
                             <Route path="/admin" element={<AdminLogin />} />
                             <Route element={<AdminRoute />}>
@@ -38,9 +49,10 @@ function App() {
                                 <Route path="/admin/bulk" element={<BulkOperations />} />
                             </Route>
                             <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
-                            <Route path="/teacher/classes/create" element={<CreateClass />} />
+
                             <Route path="/teacher/assignments/create" element={<CreateAssignment />} />
                             <Route path="/teacher/students" element={<StudentsList />} />
+                            <Route path="/teacher/groups" element={<TeacherGroupManagement />} />
                         </Routes>
                     </Layout>
                 </Router>

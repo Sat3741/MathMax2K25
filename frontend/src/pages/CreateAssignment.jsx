@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { getAuthToken } from '../utils/authUtils';
 import {
     Container,
     Typography,
@@ -10,15 +11,23 @@ import {
     Box,
     Alert,
     MenuItem,
-    Grid
+    Grid,
+    Radio,
+    RadioGroup,
+    FormControl,
+    FormLabel,
+    FormControlLabel
 } from '@mui/material';
 
 const CreateAssignment = () => {
     const [classes, setClasses] = useState([]);
+    const [groups, setGroups] = useState([]);
     const [formData, setFormData] = useState({
         title: '',
         description: '',
-        class_assigned: '',
+        assignment_type: 'class', // 'class' or 'group'
+        section_assigned: '',
+        group_assigned: '',
         topic: 'addition',
         difficulty: 1,
         num_questions: 10,
@@ -30,17 +39,30 @@ const CreateAssignment = () => {
 
     useEffect(() => {
         fetchClasses();
+        fetchGroups();
     }, []);
 
     const fetchClasses = async () => {
-        const token = localStorage.getItem('accessToken');
         try {
+            const token = getAuthToken();
             const response = await axios.get('http://localhost:8000/api/teacher/classes/', {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setClasses(response.data);
         } catch (error) {
             console.error("Error fetching classes:", error);
+        }
+    };
+
+    const fetchGroups = async () => {
+        try {
+            const token = getAuthToken();
+            const response = await axios.get('http://localhost:8000/api/teacher/groups/', {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setGroups(response.data);
+        } catch (error) {
+            console.error("Error fetching groups:", error);
         }
     };
 
@@ -53,10 +75,16 @@ const CreateAssignment = () => {
         setMessage('');
         setError('');
 
-        const token = localStorage.getItem('accessToken');
         try {
+            const token = getAuthToken();
+            // Prepare payload - convert empty strings to null for optional fields
+            const payload = {
+                ...formData,
+                due_date: formData.due_date || null
+            };
+            
             await axios.post('http://localhost:8000/api/teacher/assignments/',
-                formData,
+                payload,
                 { headers: { Authorization: `Bearer ${token}` } }
             );
             setMessage('Assignment created successfully!');
@@ -93,20 +121,50 @@ const CreateAssignment = () => {
                         onChange={handleChange}
                     />
 
-                    <TextField
-                        select
-                        label="Class"
-                        name="class_assigned"
-                        required
-                        fullWidth
-                        value={formData.class_assigned}
-                        onChange={handleChange}
-                    >
-                        <MenuItem value="">Select a class</MenuItem>
-                        {classes.map((cls) => (
-                            <MenuItem key={cls.id} value={cls.id}>{cls.name}</MenuItem>
-                        ))}
-                    </TextField>
+                    <FormControl component="fieldset">
+                        <FormLabel component="legend">Assign To</FormLabel>
+                        <RadioGroup
+                            row
+                            name="assignment_type"
+                            value={formData.assignment_type}
+                            onChange={handleChange}
+                        >
+                            <FormControlLabel value="class" control={<Radio />} label="Class" />
+                            <FormControlLabel value="group" control={<Radio />} label="Group" />
+                        </RadioGroup>
+                    </FormControl>
+
+                    {formData.assignment_type === 'class' ? (
+                        <TextField
+                            select
+                            label="Class Section"
+                            name="section_assigned"
+                            required={formData.assignment_type === 'class'}
+                            fullWidth
+                            value={formData.section_assigned}
+                            onChange={handleChange}
+                        >
+                            <MenuItem value="">Select a class section</MenuItem>
+                            {classes.map((cls) => (
+                                <MenuItem key={cls.id} value={cls.id}>{cls.display_name || cls.name}</MenuItem>
+                            ))}
+                        </TextField>
+                    ) : (
+                        <TextField
+                            select
+                            label="Group"
+                            name="group_assigned"
+                            required={formData.assignment_type === 'group'}
+                            fullWidth
+                            value={formData.group_assigned}
+                            onChange={handleChange}
+                        >
+                            <MenuItem value="">Select a group</MenuItem>
+                            {groups.map((group) => (
+                                <MenuItem key={group.id} value={group.id}>{group.name}</MenuItem>
+                            ))}
+                        </TextField>
+                    )}
 
                     <Grid container spacing={2}>
                         <Grid item xs={12} sm={6}>

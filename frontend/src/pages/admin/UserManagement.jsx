@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { getAuthToken } from '../../utils/authUtils';
 import { 
     Container, Typography, Box, Card, CardContent, Button, TextField, 
     InputAdornment, Table, TableBody, TableCell, TableContainer, 
@@ -45,7 +46,7 @@ const UserManagement = () => {
 
     const fetchUsers = async () => {
         try {
-            const token = localStorage.getItem('accessToken');
+            const token = getAuthToken();
             const response = await axios.get('http://localhost:8000/api/auth/users/', {
                 headers: { Authorization: `Bearer ${token}` }
             });
@@ -64,7 +65,7 @@ const UserManagement = () => {
 
     const fetchClasses = async () => {
         try {
-            const token = localStorage.getItem('accessToken');
+            const token = getAuthToken();
             const response = await axios.get('http://localhost:8000/api/auth/classes/', {
                 headers: { Authorization: `Bearer ${token}` }
             });
@@ -76,7 +77,7 @@ const UserManagement = () => {
 
     const fetchSections = async () => {
         try {
-            const token = localStorage.getItem('accessToken');
+            const token = getAuthToken();
             const response = await axios.get('http://localhost:8000/api/auth/sections/', {
                 headers: { Authorization: `Bearer ${token}` }
             });
@@ -88,7 +89,7 @@ const UserManagement = () => {
 
     const handleAddUser = async () => {
         try {
-            const token = localStorage.getItem('accessToken');
+            const token = getAuthToken();
             
             // Auto-generate username and password if not provided
             let username = newUser.username;
@@ -107,8 +108,8 @@ const UserManagement = () => {
                 password = Array.from({length: 8}, () => chars[Math.floor(Math.random() * chars.length)]).join('');
             }
             
-            const selectedClass = classes.find(c => c.id === parseInt(newUser.class));
-            const gradeLevel = selectedClass?.grade_level || null;
+            // Since class is now a text input for grade level, use it directly
+            const gradeLevel = newUser.class ? parseInt(newUser.class) : null;
             
             const payload = {
                 username: username,
@@ -147,7 +148,7 @@ const UserManagement = () => {
     const handleDeleteUser = async (id) => {
         if (window.confirm('Are you sure you want to delete this user?')) {
             try {
-                const token = localStorage.getItem('accessToken');
+                const token = getAuthToken();
                 await axios.delete(`http://localhost:8000/api/auth/users/${id}/`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
@@ -166,18 +167,18 @@ const UserManagement = () => {
 
     const handleSaveEdit = async () => {
         try {
-            const token = localStorage.getItem('accessToken');
+            const token = getAuthToken();
             const payload = {
                 first_name: editFormData.name,
                 username: editFormData.username,
                 phone_number: editFormData.phone,
-                grade_level: editFormData.class ? parseInt(editFormData.class) : null,
-                section: editFormData.section,
+                grade_level: (editFormData.class && editFormData.class !== '-' && !isNaN(editFormData.class)) ? parseInt(editFormData.class) : null,
+                section: (editFormData.section && editFormData.section !== '-') ? editFormData.section : '',
                 is_student: editFormData.role === 'student',
                 is_teacher: editFormData.role === 'teacher',
             };
 
-            await axios.put(`http://localhost:8000/api/auth/users/${editUserId}/`, payload, {
+            await axios.patch(`http://localhost:8000/api/auth/users/${editUserId}/`, payload, {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
@@ -191,7 +192,7 @@ const UserManagement = () => {
 
     const handleResetPassword = async (userId, username) => {
         try {
-            const token = localStorage.getItem('accessToken');
+            const token = getAuthToken();
             const response = await axios.post(
                 `http://localhost:8000/api/auth/users/${userId}/reset-password/`,
                 {},
@@ -308,33 +309,23 @@ const UserManagement = () => {
                                             />
                                         </TableCell>
                                         <TableCell>
-                                            <FormControl size="small" fullWidth>
-                                                <Select
-                                                    value={newUser.class}
-                                                    onChange={(e) => setNewUser({...newUser, class: e.target.value, section: ''})}
-                                                    displayEmpty
-                                                >
-                                                    <MenuItem value=""><em>Select Class</em></MenuItem>
-                                                    {classes.map((cls) => (
-                                                        <MenuItem key={cls.id} value={cls.id}>{cls.name}</MenuItem>
-                                                    ))}
-                                                </Select>
-                                            </FormControl>
+                                            <TextField 
+                                                size="small" 
+                                                placeholder="Grade (e.g., 9)"
+                                                type="number"
+                                                value={newUser.class}
+                                                onChange={(e) => setNewUser({...newUser, class: e.target.value})}
+                                                fullWidth
+                                            />
                                         </TableCell>
                                         <TableCell>
-                                            <FormControl size="small" fullWidth>
-                                                <Select
-                                                    value={newUser.section}
-                                                    onChange={(e) => setNewUser({...newUser, section: e.target.value})}
-                                                    displayEmpty
-                                                    disabled={!newUser.class}
-                                                >
-                                                    <MenuItem value=""><em>Select Section</em></MenuItem>
-                                                    {filteredSections.map((sec) => (
-                                                        <MenuItem key={sec.id} value={sec.name}>{sec.name}</MenuItem>
-                                                    ))}
-                                                </Select>
-                                            </FormControl>
+                                            <TextField 
+                                                size="small" 
+                                                placeholder="Section (e.g., A)"
+                                                value={newUser.section}
+                                                onChange={(e) => setNewUser({...newUser, section: e.target.value})}
+                                                fullWidth
+                                            />
                                         </TableCell>
                                         <TableCell align="right">
                                             <IconButton color="primary" onClick={handleAddUser}>

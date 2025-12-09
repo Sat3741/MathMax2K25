@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { getAuthToken } from '../utils/authUtils';
 import {
     Container,
     Typography,
@@ -22,8 +23,8 @@ const CreateClass = () => {
         setMessage('');
         setError('');
 
-        const token = localStorage.getItem('accessToken');
         try {
+            const token = getAuthToken();
             await axios.post('http://localhost:8000/api/teacher/classes/',
                 { name },
                 { headers: { Authorization: `Bearer ${token}` } }

@@ -8,7 +8,12 @@ class ProblemView(APIView):
 
     def get(self, request):
         topic = request.query_params.get('topic', 'addition')
-        difficulty = int(request.query_params.get('difficulty', 1))
+        try:
+            # First try to convert to float, then round to nearest integer
+            difficulty = float(request.query_params.get('difficulty', 1))
+            difficulty = max(1, min(10, round(difficulty)))  # Ensure difficulty is between 1 and 10
+        except (ValueError, TypeError):
+            difficulty = 1  # Default to 1 if conversion fails
         
         problem = generate_problem(topic, difficulty)
         return Response(problem)

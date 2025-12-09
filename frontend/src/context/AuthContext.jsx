@@ -1,5 +1,6 @@
 import { createContext, useState, useContext, useEffect } from 'react';
 import axios from 'axios';
+import { getAuthToken, clearAuthTokens } from '../utils/authUtils';
 
 const AuthContext = createContext(null);
 
@@ -8,9 +9,10 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Check if user is logged in on mount
-        const storedUser = localStorage.getItem('user');
-        const token = localStorage.getItem('accessToken');
+        // Check if user is logged in onto mount (check both storages)
+        const storedUser = sessionStorage.getItem('user') || localStorage.getItem('user');
+        const token = getAuthToken();
+        
         if (storedUser && token) {
             setUser(JSON.parse(storedUser));
         }
@@ -24,6 +26,7 @@ export const AuthProvider = ({ children }) => {
         });
 
         const { tokens, user: userData } = response.data;
+        // Main Login (Student/Teacher) -> Persistent LocalStorage
         localStorage.setItem('accessToken', tokens.access);
         localStorage.setItem('refreshToken', tokens.refresh);
         localStorage.setItem('user', JSON.stringify(userData));
@@ -38,9 +41,10 @@ export const AuthProvider = ({ children }) => {
         });
 
         const { tokens, user: userData } = response.data;
-        localStorage.setItem('accessToken', tokens.access);
-        localStorage.setItem('refreshToken', tokens.refresh);
-        localStorage.setItem('user', JSON.stringify(userData));
+        // Admin Login -> SessionStorage (Auto-logout on close)
+        sessionStorage.setItem('accessToken', tokens.access);
+        sessionStorage.setItem('refreshToken', tokens.refresh);
+        sessionStorage.setItem('user', JSON.stringify(userData));
         setUser(userData);
         return userData;
     };
@@ -51,9 +55,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     const logout = () => {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('user');
+        clearAuthTokens();
         setUser(null);
     };
 

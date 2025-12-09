@@ -1,15 +1,16 @@
-from rest_framework import generics, permissions, status
+from rest_framework import generics, permissions, status, viewsets
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.contrib.auth import get_user_model
 from .models import Class, Assignment, StudentProgress
-from .serializers import ClassSerializer, AssignmentSerializer, StudentProgressSerializer
+from .serializers import AssignmentSerializer, StudentProgressSerializer, TeacherSectionSerializer
 
 User = get_user_model()
 
 class IsTeacher(permissions.BasePermission):
     def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.is_teacher
+        # Allow teachers AND admins to access teacher views
+        return request.user.is_authenticated and (request.user.is_teacher or request.user.is_staff)
 
 
 class TeacherDashboardView(APIView):
@@ -17,35 +18,39 @@ class TeacherDashboardView(APIView):
 
     def get(self, request):
         teacher = request.user
-        classes = Class.objects.filter(teacher=teacher)
+        # Show ALL sections and students (Global view as requested)
+        sections = Section.objects.all()
         assignments = Assignment.objects.filter(teacher=teacher)
         
+        # Count all students in the system
+        student_count = User.objects.filter(is_student=True).count()
+
         return Response({
-            'classes_count': classes.count(),
+            'classes_count': sections.count(),
             'assignments_count': assignments.count(),
-            'students_count': sum(c.students.count() for c in classes),
-            'recent_classes': ClassSerializer(classes[:5], many=True).data,
+            'students_count': student_count,
+            'recent_classes': TeacherSectionSerializer(sections[:5], many=True).data,
             'recent_assignments': AssignmentSerializer(assignments[:5], many=True).data,
         })
 
 
-class ClassListCreateView(generics.ListCreateAPIView):
-    serializer_class = ClassSerializer
+from core.models import Section
+from core.serializers import SectionSerializer
+from .serializers import TeacherSectionSerializer
+
+class SectionListView(generics.ListAPIView):
+    serializer_class = TeacherSectionSerializer
     permission_classes = [IsTeacher]
 
     def get_queryset(self):
-        return Class.objects.filter(teacher=self.request.user)
+        # Return ALL sections so teachers can assign to any class
+        return Section.objects.all()
 
-    def perform_create(self, serializer):
-        serializer.save(teacher=self.request.user)
-
-
-class ClassDetailView(generics.RetrieveUpdateDestroyAPIView):
-    serializer_class = ClassSerializer
+class ClassDetailView(generics.RetrieveAPIView):
+    # Read-only detail view for sections
+    serializer_class = TeacherSectionSerializer
     permission_classes = [IsTeacher]
-
-    def get_queryset(self):
-        return Class.objects.filter(teacher=self.request.user)
+    queryset = Section.objects.all()
 
 
 class AddStudentToClassView(APIView):
@@ -74,6 +79,16 @@ class AssignmentListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         serializer.save(teacher=self.request.user)
 
+    def post(self, request, *args, **kwargs):
+        print(f"DEBUG: Assignment Create Data: {request.data}")
+        serializer = self.get_serializer(data=request.data)
+        if not serializer.is_valid():
+            print(f"DEBUG: Assignment Validation Errors: {serializer.errors}")
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
 
 class AssignmentDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = AssignmentSerializer
@@ -87,13 +102,13 @@ class StudentProgressView(APIView):
     permission_classes = [IsTeacher]
 
     def get(self, request, student_id):
-        # Get all progress for a specific student in teacher's classes
-        teacher_classes = Class.objects.filter(teacher=request.user)
+        # Get all progress for a specific student in teacher's sections
+        teacher_sections = Section.objects.filter(teacher=request.user)
         student = User.objects.get(id=student_id)
         
         progress = StudentProgress.objects.filter(
             student=student,
-            assignment__class_assigned__in=teacher_classes
+            assignment__section_assigned__in=teacher_sections
         )
         
         return Response({
@@ -110,12 +125,26 @@ class StudentsListView(APIView):
     permission_classes = [IsTeacher]
 
     def get(self, request):
-        # Get all students enrolled in teacher's classes
-        teacher_classes = Class.objects.filter(teacher=request.user)
-        students = User.objects.filter(
-            enrolled_classes__in=teacher_classes,
-            is_student=True
-        ).distinct()
+        # Allow teachers to see all students to create groups
+        students = User.objects.filter(is_student=True)
+        print(f"DEBUG: StudentsListView hit by {request.user.username}")
+        print(f"DEBUG: Found {students.count()} students in database")
         
         from core.serializers import UserSerializer
         return Response(UserSerializer(students, many=True).data)
+
+from core.models import Group
+from core.serializers import GroupSerializer
+
+class TeacherGroupViewSet(viewsets.ModelViewSet):
+    serializer_class = GroupSerializer
+    permission_classes = [IsTeacher]
+
+    def get_queryset(self):
+        # Teachers see groups they created OR groups they are involved with?
+        # For now, let's say groups they created.
+        return Group.objects.filter(created_by=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
+

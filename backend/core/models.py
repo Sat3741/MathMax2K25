@@ -35,7 +35,8 @@ class Section(models.Model):
     """Represents a section within an academic class"""
     name = models.CharField(max_length=10)  # e.g., "A", "B", "Rose"
     academic_class = models.ForeignKey(AcademicClass, on_delete=models.CASCADE, related_name='sections')
-    section_teacher = models.CharField(max_length=100, blank=True, null=True)  # Teacher for this specific section
+    section_teacher = models.CharField(max_length=100, blank=True, null=True)  # Legacy string field
+    teacher = models.ForeignKey('User', on_delete=models.SET_NULL, null=True, blank=True, related_name='sections_taught')
     capacity = models.IntegerField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

@@ -31,7 +31,9 @@ class Assignment(models.Model):
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
     teacher = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='assignments')
-    class_assigned = models.ForeignKey(Class, on_delete=models.CASCADE, related_name='assignments')
+    section_assigned = models.ForeignKey('core.Section', on_delete=models.CASCADE, related_name='assignments', null=True, blank=True)
+    # class_assigned = models.ForeignKey(Class, on_delete=models.CASCADE, related_name='assignments', null=True, blank=True) # Deprecated
+    group_assigned = models.ForeignKey('core.Group', on_delete=models.CASCADE, related_name='assignments', null=True, blank=True)
     topic = models.CharField(max_length=20, choices=TOPIC_CHOICES)
     difficulty = models.IntegerField(choices=DIFFICULTY_CHOICES, default=1)
     num_questions = models.IntegerField(default=10)
@@ -39,7 +41,8 @@ class Assignment(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.title} - {self.class_assigned.name}"
+        target = self.section_assigned.name if self.section_assigned else (self.group_assigned.name if self.group_assigned else "Unassigned")
+        return f"{self.title} - {target}"
 
 
 class StudentProgress(models.Model):

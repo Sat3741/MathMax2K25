@@ -1,10 +1,3 @@
-import { useState, useEffect } from 'react';
-import { 
-    Container, Typography, Box, Card, Button, TextField, 
-    Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-    IconButton, Alert, Collapse, Chip, InputAdornment
-} from '@mui/material';
-import { Add, Delete, Save, Cancel, Edit, ExpandMore, ExpandLess, Search } from '@mui/icons-material';
 import axios from 'axios';
 
 const ClassManagement = () => {
@@ -38,7 +31,7 @@ const ClassManagement = () => {
 
     const fetchClasses = async () => {
         try {
-            const token = localStorage.getItem('accessToken');
+            const token = getAuthToken();
             const response = await axios.get('http://localhost:8000/api/auth/classes/', {
                 headers: { Authorization: `Bearer ${token}` }
             });
@@ -53,7 +46,7 @@ const ClassManagement = () => {
 
     const fetchStudents = async () => {
         try {
-            const token = localStorage.getItem('accessToken');
+            const token = getAuthToken();
             const response = await axios.get('http://localhost:8000/api/auth/users/', {
                 headers: { Authorization: `Bearer ${token}` }
             });
@@ -87,7 +80,7 @@ const ClassManagement = () => {
     const handleAddClass = async () => {
         if (newClass.name.trim() && newClass.grade_level) {
             try {
-                const token = localStorage.getItem('accessToken');
+                const token = getAuthToken();
                 await axios.post('http://localhost:8000/api/auth/classes/', {
                     name: newClass.name,
                     grade_level: parseInt(newClass.grade_level),
@@ -108,7 +101,7 @@ const ClassManagement = () => {
 
     const handleEditClass = async (id) => {
         try {
-            const token = localStorage.getItem('accessToken');
+            const token = getAuthToken();
             await axios.put(`http://localhost:8000/api/auth/classes/${id}/`, {
                 name: editData.name,
                 grade_level: parseInt(editData.grade_level),
@@ -127,7 +120,7 @@ const ClassManagement = () => {
 
     const handleEditSection = async (sectionId) => {
         try {
-            const token = localStorage.getItem('accessToken');
+            const token = getAuthToken();
             await axios.patch(`http://localhost:8000/api/auth/sections/${sectionId}/`, {
                 section_teacher: editSectionData.section_teacher
             }, {
@@ -144,7 +137,7 @@ const ClassManagement = () => {
     const handleDeleteClass = async (id) => {
         if (window.confirm('Are you sure you want to delete this class?')) {
             try {
-                const token = localStorage.getItem('accessToken');
+                const token = getAuthToken();
                 await axios.delete(`http://localhost:8000/api/auth/classes/${id}/`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });

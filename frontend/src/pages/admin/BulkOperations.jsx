@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { getAuthToken } from '../../utils/authUtils';
 import { 
     Container, Typography, Box, Card, CardContent, Grid, Button, 
     Stepper, Step, StepLabel, FormControl, InputLabel, Select, MenuItem,
@@ -22,6 +23,51 @@ const BulkOperations = () => {
         fromClass: '',
         toClass: ''
     });
+    const [classes, setClasses] = useState([]);
+    const [promoting, setPromoting] = useState(false);
+    const [studentCount, setStudentCount] = useState(0);
+
+    useEffect(() => {
+        fetchClasses();
+    }, []);
+
+    useEffect(() => {
+        if (promoteData.fromClass) {
+            fetchStudentCount();
+        }
+    }, [promoteData.fromClass]);
+
+    const fetchClasses = async () => {
+        try {
+            const token = getAuthToken();
+            const response = await axios.get('http://localhost:8000/api/auth/classes/', {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setClasses(response.data);
+        } catch (err) {
+            console.error('Failed to fetch classes:', err);
+        }
+    };
+
+    const fetchStudentCount = async () => {
+        try {
+            const token = getAuthToken();
+            const response = await axios.get('http://localhost:8000/api/auth/users/', {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            
+            // Use loose comparison for grade_level to handle string/number differences
+            // Check both is_student flag and role string just in case
+            const count = response.data.filter(u => 
+                (u.is_student || u.role === 'student') && 
+                u.grade_level == promoteData.fromClass
+            ).length;
+            
+            setStudentCount(count);
+        } catch (err) {
+            console.error('Failed to fetch student count:', err);
+        }
+    };
 
     const handleFileChange = (e) => {
         setUploadFile(e.target.files[0]);
@@ -33,7 +79,7 @@ const BulkOperations = () => {
         if (uploadFile) {
             setUploading(true);
             try {
-                const token = localStorage.getItem('accessToken');
+                const token = getAuthToken();
                 const formData = new FormData();
                 formData.append('file', uploadFile);
 
@@ -80,12 +126,33 @@ const BulkOperations = () => {
         window.URL.revokeObjectURL(url);
     };
 
-    const handlePromoteNext = () => {
+    const handlePromoteNext = async () => {
         if (activeStep === 2) {
-            // Finish
-            setActiveStep(0);
-            setPromoteData({ fromClass: '', toClass: '' });
-            alert('Students promoted successfully!');
+            // Execute promotion
+            setPromoting(true);
+            try {
+                const token = getAuthToken();
+                await axios.post(
+                    'http://localhost:8000/api/auth/bulk-promote/',
+                    {
+                        from_grade: parseInt(promoteData.fromClass),
+                        to_grade: parseInt(promoteData.toClass)
+                    },
+                    {
+                        headers: { Authorization: `Bearer ${token}` }
+                    }
+                );
+                
+                alert(`Successfully promoted ${studentCount} students from Grade ${promoteData.fromClass} to Grade ${promoteData.toClass}!`);
+                setActiveStep(0);
+                setPromoteData({ fromClass: '', toClass: '' });
+                setStudentCount(0);
+            } catch (err) {
+                console.error('Promotion error:', err);
+                alert('Failed to promote students: ' + (err.response?.data?.error || err.message));
+            } finally {
+                setPromoting(false);
+            }
         } else {
             setActiveStep((prev) => prev + 1);
         }
@@ -93,87 +160,93 @@ const BulkOperations = () => {
 
     const steps = ['Select Current Class', 'Select Target Class', 'Confirm Promotion'];
 
+    // Get unique grade levels from classes
+    const gradeLevels = [...new Set(classes.map(c => c.grade_level))].sort((a, b) => a - b);
+
     return (
         <Container maxWidth="lg" sx={{ py: 4 }}>
             <Typography variant="h4" fontWeight="bold" gutterBottom sx={{ mb: 4 }}>
                 Bulk Operations
             </Typography>
-            
+
             <Grid container spacing={4}>
-                {/* Bulk User Upload */}
+                {/* Bulk Upload Section */}
                 <Grid item xs={12} md={6}>
-                    <Card sx={{ height: '100%' }}>
-                        <CardContent sx={{ textAlign: 'center', py: 4 }}>
-                            <CloudUpload sx={{ fontSize: 60, color: 'primary.main', mb: 2 }} />
-                            <Typography variant="h5" gutterBottom fontWeight="bold">
-                                Bulk User Upload
-                            </Typography>
-                            <Typography color="text.secondary" sx={{ mb: 3 }}>
-                                Upload multiple users via CSV or Excel template.
-                            </Typography>
-                            
-                            <Box sx={{ mb: 3 }}>
-                                <Button 
-                                    variant="outlined" 
-                                    startIcon={<Download />}
-                                    href="http://localhost:8000/static/bulk_upload_template.xlsx"
-                                    download="bulk_upload_template.xlsx"
-                                    sx={{ mb: 2 }}
-                                >
-                                    Download Template
-                                </Button>
-                            </Box>
-                            
-                            <Box sx={{ mb: 3 }}>
-                                <Button variant="outlined" component="label">
-                                    Choose File
-                                    <input type="file" hidden accept=".csv,.xlsx,.xls" onChange={handleFileChange} />
-                                </Button>
-                                {uploadFile && (
-                                    <Typography variant="body2" sx={{ mt: 1 }}>
-                                        Selected: {uploadFile.name}
-                                    </Typography>
-                                )}
+                    <Card>
+                        <CardContent>
+                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                                <CloudUpload sx={{ fontSize: 40, mr: 2, color: 'primary.main' }} />
+                                <Typography variant="h5" fontWeight="bold">
+                                    Bulk User Upload
+                                </Typography>
                             </Box>
 
-                            {uploading && <LinearProgress sx={{ mb: 2 }} />}
-                            
-                            {uploadSuccess && uploadResult && (
-                                <Alert severity="success" sx={{ mb: 2 }}>
-                                    Successfully created {uploadResult.created_count} users!
-                                    {uploadResult.error_count > 0 && ` (${uploadResult.error_count} errors)`}
-                                </Alert>
-                            )}
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                                Upload an Excel file to create multiple users at once. Download the template to see the required format.
+                            </Typography>
 
-                            <Button 
-                                variant="contained" 
+                            <Button
+                                variant="outlined"
+                                startIcon={<Download />}
+                                fullWidth
+                                sx={{ mb: 2 }}
+                                onClick={() => window.location.href = '/static/templates/user_upload_template.xlsx'}
+                            >
+                                Download Template
+                            </Button>
+
+                            <Button
+                                variant="contained"
+                                component="label"
+                                fullWidth
+                                sx={{ mb: 2 }}
+                            >
+                                {uploadFile ? uploadFile.name : 'Choose File'}
+                                <input
+                                    type="file"
+                                    hidden
+                                    accept=".xlsx,.xls"
+                                    onChange={handleFileChange}
+                                />
+                            </Button>
+
+                            <Button
+                                variant="contained"
+                                color="primary"
+                                fullWidth
                                 disabled={!uploadFile || uploading}
                                 onClick={handleUpload}
                             >
-                                {uploading ? 'Uploading...' : 'Upload Users'}
+                                {uploading ? 'Uploading...' : 'Upload'}
                             </Button>
 
-                            <Box sx={{ mt: 2 }}>
-                                <Typography variant="caption" color="text.secondary">
-                                    CSV Format: username,first_name,last_name,email,role,grade_level,section,phone_number
-                                </Typography>
-                            </Box>
+                            {uploading && <LinearProgress sx={{ mt: 2 }} />}
+
+                            {uploadSuccess && uploadResult && (
+                                <Alert severity="success" sx={{ mt: 2 }}>
+                                    Successfully created {uploadResult.created_count} users!
+                                </Alert>
+                            )}
                         </CardContent>
                     </Card>
                 </Grid>
 
-                {/* Bulk Promote */}
+                {/* Bulk Promote Section */}
                 <Grid item xs={12} md={6}>
-                    <Card sx={{ height: '100%' }}>
-                        <CardContent sx={{ py: 4 }}>
-                            <Box sx={{ textAlign: 'center', mb: 3 }}>
-                                <School sx={{ fontSize: 60, color: 'secondary.main', mb: 2 }} />
-                                <Typography variant="h5" gutterBottom fontWeight="bold">
-                                    Bulk Promote
+                    <Card>
+                        <CardContent>
+                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                                <School sx={{ fontSize: 40, mr: 2, color: 'secondary.main' }} />
+                                <Typography variant="h5" fontWeight="bold">
+                                    Promote Students
                                 </Typography>
                             </Box>
 
-                            <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 4 }}>
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                                Promote all students from one grade to the next grade level.
+                            </Typography>
+
+                            <Stepper activeStep={activeStep} sx={{ mb: 3 }}>
                                 {steps.map((label) => (
                                     <Step key={label}>
                                         <StepLabel>{label}</StepLabel>
@@ -183,41 +256,54 @@ const BulkOperations = () => {
 
                             <Box sx={{ minHeight: 150 }}>
                                 {activeStep === 0 && (
-                                    <FormControl fullWidth>
-                                        <InputLabel>Promote From Class</InputLabel>
-                                        <Select
-                                            value={promoteData.fromClass}
-                                            label="Promote From Class"
-                                            onChange={(e) => setPromoteData({...promoteData, fromClass: e.target.value})}
-                                        >
-                                            <MenuItem value="6">Class 6</MenuItem>
-                                            <MenuItem value="7">Class 7</MenuItem>
-                                            <MenuItem value="8">Class 8</MenuItem>
-                                        </Select>
-                                    </FormControl>
+                                    <Box>
+                                        <FormControl fullWidth>
+                                            <InputLabel>Promote From Grade</InputLabel>
+                                            <Select
+                                                value={promoteData.fromClass}
+                                                label="Promote From Grade"
+                                                onChange={(e) => setPromoteData({...promoteData, fromClass: e.target.value})}
+                                            >
+                                                {gradeLevels.map(grade => (
+                                                    <MenuItem key={grade} value={grade}>Grade {grade}</MenuItem>
+                                                ))}
+                                            </Select>
+                                        </FormControl>
+                                        {promoteData.fromClass && (
+                                            <Alert severity="info" sx={{ mt: 2 }}>
+                                                {studentCount} student(s) found in Grade {promoteData.fromClass}
+                                            </Alert>
+                                        )}
+                                    </Box>
                                 )}
                                 {activeStep === 1 && (
                                     <FormControl fullWidth>
-                                        <InputLabel>Promote To Class</InputLabel>
+                                        <InputLabel>Promote To Grade</InputLabel>
                                         <Select
                                             value={promoteData.toClass}
-                                            label="Promote To Class"
+                                            label="Promote To Grade"
                                             onChange={(e) => setPromoteData({...promoteData, toClass: e.target.value})}
                                         >
-                                            <MenuItem value="7">Class 7</MenuItem>
-                                            <MenuItem value="8">Class 8</MenuItem>
-                                            <MenuItem value="9">Class 9</MenuItem>
+                                            {gradeLevels
+                                                .filter(grade => grade > parseInt(promoteData.fromClass))
+                                                .map(grade => (
+                                                    <MenuItem key={grade} value={grade}>Grade {grade}</MenuItem>
+                                                ))}
                                         </Select>
                                     </FormControl>
                                 )}
                                 {activeStep === 2 && (
                                     <Box sx={{ textAlign: 'center' }}>
+                                        <CheckCircle sx={{ fontSize: 60, color: 'success.main', mb: 2 }} />
                                         <Typography variant="h6" gutterBottom>
                                             Confirm Promotion
                                         </Typography>
                                         <Typography>
-                                            Promote all students from <strong>Class {promoteData.fromClass}</strong> to <strong>Class {promoteData.toClass}</strong>?
+                                            Promote <strong>{studentCount} student(s)</strong> from <strong>Grade {promoteData.fromClass}</strong> to <strong>Grade {promoteData.toClass}</strong>?
                                         </Typography>
+                                        <Alert severity="warning" sx={{ mt: 2 }}>
+                                            This action will update all students' grade levels. This cannot be undone.
+                                        </Alert>
                                     </Box>
                                 )}
                             </Box>
@@ -235,10 +321,11 @@ const BulkOperations = () => {
                                     onClick={handlePromoteNext}
                                     disabled={
                                         (activeStep === 0 && !promoteData.fromClass) ||
-                                        (activeStep === 1 && !promoteData.toClass)
+                                        (activeStep === 1 && !promoteData.toClass) ||
+                                        promoting
                                     }
                                 >
-                                    {activeStep === 2 ? 'Confirm Promote' : 'Next'}
+                                    {promoting ? 'Promoting...' : (activeStep === 2 ? 'Confirm Promote' : 'Next')}
                                 </Button>
                             </Box>
                         </CardContent>
@@ -254,30 +341,34 @@ const BulkOperations = () => {
                 fullWidth
             >
                 <DialogTitle>
-                    User Credentials Created
+                    Users Created Successfully
                 </DialogTitle>
                 <DialogContent>
                     <Alert severity="warning" sx={{ mb: 2 }}>
-                        Please save these passwords! They will not be shown again.
+                        Please save these credentials! Passwords will not be shown again.
                     </Alert>
                     
                     {uploadResult && uploadResult.created_users && (
-                        <TableContainer component={Paper}>
-                            <Table size="small">
+                        <TableContainer component={Paper} sx={{ maxHeight: 400 }}>
+                            <Table stickyHeader size="small">
                                 <TableHead>
                                     <TableRow>
+                                        <TableCell><strong>Name</strong></TableCell>
                                         <TableCell><strong>Username</strong></TableCell>
                                         <TableCell><strong>Password</strong></TableCell>
-                                        <TableCell><strong>Name</strong></TableCell>
                                         <TableCell><strong>Role</strong></TableCell>
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>
                                     {uploadResult.created_users.map((user, index) => (
                                         <TableRow key={index}>
-                                            <TableCell>{user.username}</TableCell>
-                                            <TableCell><code>{user.password}</code></TableCell>
                                             <TableCell>{user.name}</TableCell>
+                                            <TableCell sx={{ fontFamily: 'monospace', color: 'primary.main' }}>
+                                                {user.username}
+                                            </TableCell>
+                                            <TableCell sx={{ fontFamily: 'monospace', color: 'error.main', fontWeight: 'bold' }}>
+                                                {user.password}
+                                            </TableCell>
                                             <TableCell>{user.role}</TableCell>
                                         </TableRow>
                                     ))}
@@ -285,27 +376,14 @@ const BulkOperations = () => {
                             </Table>
                         </TableContainer>
                     )}
-
-                    {uploadResult && uploadResult.errors && uploadResult.errors.length > 0 && (
-                        <Box sx={{ mt: 2 }}>
-                            <Typography variant="subtitle2" color="error" gutterBottom>
-                                Errors ({uploadResult.errors.length}):
-                            </Typography>
-                            {uploadResult.errors.map((error, index) => (
-                                <Alert severity="error" key={index} sx={{ mb: 1 }}>
-                                    {error.username}: {error.error}
-                                </Alert>
-                            ))}
-                        </Box>
-                    )}
                 </DialogContent>
                 <DialogActions>
                     <Button 
-                        startIcon={<Download />} 
+                        startIcon={<Download />}
                         onClick={downloadPasswordList}
                         variant="outlined"
                     >
-                        Download CSV
+                        Download as CSV
                     </Button>
                     <Button onClick={() => setShowPasswordModal(false)} variant="contained">
                         Close

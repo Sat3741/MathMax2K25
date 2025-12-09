@@ -1,5 +1,5 @@
 import { Container, Box, Typography, Button, Grid, Card, CardContent, Stack, useTheme, alpha } from '@mui/material';
-import { School, Calculate, TrendingUp, EmojiEvents, ArrowForward, CheckCircle, RocketLaunch, AutoGraph } from '@mui/icons-material';
+import { GraduationCap, Calculator, TrendingUp, Trophy, ArrowRight, CheckCircle, Rocket, Activity } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
@@ -22,28 +22,28 @@ const Home = () => {
 
     const features = [
         {
-            icon: <Calculate sx={{ fontSize: 40 }} />,
+            icon: <Calculator size={40} />,
             title: "Smart Practice",
             description: "Adaptive problems that evolve with your skill level. Get instant feedback and detailed solutions.",
             color: theme.palette.primary.main,
             bg: alpha(theme.palette.primary.main, 0.1)
         },
         {
-            icon: <School sx={{ fontSize: 40 }} />,
+            icon: <GraduationCap size={40} />,
             title: "Teacher Tools",
             description: "Powerful dashboard for teachers to create assignments, track progress, and manage classes.",
             color: theme.palette.secondary.main,
             bg: alpha(theme.palette.secondary.main, 0.1)
         },
         {
-            icon: <AutoGraph sx={{ fontSize: 40 }} />,
+            icon: <Activity size={40} />,
             title: "Analytics",
             description: "Visual progress tracking helps you identify strengths and areas for improvement.",
             color: theme.palette.success.main,
             bg: alpha(theme.palette.success.main, 0.1)
         },
         {
-            icon: <EmojiEvents sx={{ fontSize: 40 }} />,
+            icon: <Trophy size={40} />,
             title: "Gamification",
             description: "Earn badges, climb leaderboards, and stay motivated with our reward system.",
             color: theme.palette.warning.main,
@@ -91,7 +91,7 @@ const Home = () => {
                     },
                     zIndex: 0
                 }}>
-                    <Calculate sx={{ fontSize: 80, color: theme.palette.primary.main }} />
+                    <Calculator size={80} color={theme.palette.primary.main} />
                 </Box>
                 <Box sx={{
                     position: 'absolute',
@@ -101,7 +101,7 @@ const Home = () => {
                     animation: 'float 8s ease-in-out infinite reverse',
                     zIndex: 0
                 }}>
-                    <AutoGraph sx={{ fontSize: 100, color: theme.palette.secondary.main }} />
+                    <Activity size={100} color={theme.palette.secondary.main} />
                 </Box>
                 <Box sx={{
                     position: 'absolute',
@@ -111,7 +111,7 @@ const Home = () => {
                     animation: 'float 7s ease-in-out infinite 1s',
                     zIndex: 0
                 }}>
-                    <TrendingUp sx={{ fontSize: 60, color: theme.palette.success.main }} />
+                    <TrendingUp size={60} color={theme.palette.success.main} />
                 </Box>
 
                 {/* Background Blobs */}
@@ -172,7 +172,7 @@ const Home = () => {
                                 variant="contained"
                                 size="large"
                                 onClick={handleGetStarted}
-                                endIcon={<ArrowForward />}
+                                endIcon={<ArrowRight />}
                                 sx={{ px: 4, py: 1.5, fontSize: '1.1rem', borderRadius: 50 }}
                             >
                                 {isAuthenticated ? 'Go to Dashboard' : 'Get Started Free'}
@@ -191,7 +191,7 @@ const Home = () => {
                         <Stack direction="row" spacing={3} sx={{ mt: 6 }} justifyContent="center">
                             {['Free for Students', 'Adaptive Learning', 'Real-time Analytics'].map((text) => (
                                 <Box key={text} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                    <CheckCircle color="success" sx={{ fontSize: 20 }} />
+                                    <CheckCircle color={theme.palette.success.main} size={20} />
                                     <Typography variant="body2" fontWeight={600} color="text.secondary">
                                         {text}
                                     </Typography>

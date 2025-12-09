@@ -4,7 +4,7 @@ import {
     Container, Box, Card, CardContent, TextField, Button,
     Typography, Tabs, Tab, Alert, CircularProgress, InputAdornment, IconButton, useTheme
 } from '@mui/material';
-import { School, Person, Calculate, Visibility, VisibilityOff, LockOutlined, AccountCircle } from '@mui/icons-material';
+import { GraduationCap, User, Calculator, Eye, EyeOff, Lock, UserCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const Login = () => {
@@ -32,7 +32,7 @@ const Login = () => {
                     setLoading(false);
                     return;
                 }
-                navigate('/practice');
+                navigate('/student/dashboard');
             } else if (tab === 1) {
                 if (!userData.is_teacher) {
                     setError('This account is not a teacher account. Please use the Student tab.');
@@ -42,7 +42,11 @@ const Login = () => {
                 navigate('/teacher/dashboard');
             }
         } catch (err) {
-            setError('Invalid credentials. Please try again.');
+            if (err.response && err.response.data && err.response.data.error) {
+                setError(err.response.data.error);
+            } else {
+                setError('Invalid credentials. Please try again.');
+            }
         } finally {
             setLoading(false);
         }
@@ -80,7 +84,7 @@ const Login = () => {
                                     boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
                                 }}
                             >
-                                <Calculate sx={{ fontSize: 32, color: 'white' }} />
+                                <Calculator size={32} color='white' />
                             </Box>
                         </Box>
 
@@ -118,8 +122,8 @@ const Login = () => {
                                 }
                             }}
                         >
-                            <Tab icon={<Person />} iconPosition="start" label="Student" />
-                            <Tab icon={<School />} iconPosition="start" label="Teacher" />
+                            <Tab icon={<User size={20} />} iconPosition="start" label="Student" />
+                            <Tab icon={<GraduationCap size={20} />} iconPosition="start" label="Teacher" />
                         </Tabs>
 
                         <form onSubmit={handleSubmit}>
@@ -133,7 +137,7 @@ const Login = () => {
                                 InputProps={{
                                     startAdornment: (
                                         <InputAdornment position="start">
-                                            <AccountCircle color="action" />
+                                            <UserCircle color={theme.palette.action.active} size={20} />
                                         </InputAdornment>
                                     )
                                 }}
@@ -149,7 +153,7 @@ const Login = () => {
                                 InputProps={{
                                     startAdornment: (
                                         <InputAdornment position="start">
-                                            <LockOutlined color="action" />
+                                            <Lock color={theme.palette.action.active} size={20} />
                                         </InputAdornment>
                                     ),
                                     endAdornment: (
@@ -158,7 +162,7 @@ const Login = () => {
                                                 onClick={() => setShowPassword(!showPassword)}
                                                 edge="end"
                                             >
-                                                {showPassword ? <VisibilityOff /> : <Visibility />}
+                                                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                                             </IconButton>
                                         </InputAdornment>
                                     )

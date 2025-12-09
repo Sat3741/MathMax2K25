@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Container, Typography, Grid, Card, CardContent, Box, useTheme, CircularProgress } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { getAuthToken } from '../utils/authUtils';
 import { 
     People, Class, Groups, CloudUpload, Settings, 
     TrendingUp, AssignmentInd 
@@ -51,7 +52,7 @@ const AdminDashboard = () => {
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                const token = localStorage.getItem('accessToken');
+                const token = getAuthToken();
                 const response = await axios.get('http://localhost:8000/api/auth/dashboard/stats/', {
                     headers: { Authorization: `Bearer ${token}` }
                 });
@@ -149,7 +150,7 @@ const AdminDashboard = () => {
                                 {loading ? (
                                     <CircularProgress size={40} />
                                 ) : (
-                                    <Typography variant="h3" fontWeight="bold">{stats.active_classes}</Typography>
+                                    <Typography variant="h3" fontWeight="bold">{stats.total_classes}</Typography>
                                 )}
                             </CardContent>
                         </Card>

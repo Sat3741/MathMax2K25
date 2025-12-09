@@ -4,22 +4,34 @@ from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
-class ClassSerializer(serializers.ModelSerializer):
+from core.models import Section
+from core.serializers import SectionSerializer
+
+class TeacherSectionSerializer(serializers.ModelSerializer):
     student_count = serializers.SerializerMethodField()
+    display_name = serializers.SerializerMethodField()
 
     class Meta:
-        model = Class
-        fields = ['id', 'name', 'teacher', 'students', 'student_count', 'created_at']
+        model = Section
+        fields = ['id', 'name', 'academic_class', 'teacher', 'student_count', 'display_name', 'created_at']
         read_only_fields = ['id', 'teacher', 'created_at']
 
     def get_student_count(self, obj):
-        return obj.students.count()
+        # Calculate students in this section based on User properties
+        return User.objects.filter(
+            grade_level=obj.academic_class.grade_level,
+            section=obj.name,
+            is_student=True
+        ).count()
+
+    def get_display_name(self, obj):
+        return f"{obj.academic_class.name} - Section {obj.name}"
 
 
 class AssignmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Assignment
-        fields = ['id', 'title', 'description', 'teacher', 'class_assigned', 'topic', 'difficulty', 'num_questions', 'due_date', 'created_at']
+        fields = ['id', 'title', 'description', 'teacher', 'section_assigned', 'group_assigned', 'topic', 'difficulty', 'num_questions', 'due_date', 'created_at']
         read_only_fields = ['id', 'teacher', 'created_at']
 
 
