@@ -135,10 +135,8 @@ const Practice = () => {
         // Check if answer is correct and auto-advance
         const isCorrect = Math.abs(parsed - problem.answer) < 0.001;
         if (isCorrect) {
-          // Small delay to show the answer before advancing
-          setTimeout(() => {
-            handleAnswer(true);
-          }, 300);
+          // Immediate advancement for voice
+          handleAnswer(true);
         }
       }
     }

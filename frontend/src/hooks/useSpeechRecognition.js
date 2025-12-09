@@ -31,7 +31,21 @@ const useSpeechRecognition = () => {
         const lastResult = event.results[event.results.length - 1];
         const speechResult = lastResult[0].transcript;
         
-        // Only process final results (when user finishes speaking a phrase)
+        // Optimize: Check interim results for numbers too if we need speed
+        // If it looks like a valid number, we can send it immediately
+        if (!lastResult.isFinal) {
+             // Optional: Try to parse interim number. Creating a "provisional" transcript.
+             // But to be safe, we usually wait for final. 
+             // However, user asked for "immediately".
+             // Let's pass it if it's a clear number.
+             const potentialNumber = parseSpokenNumber(speechResult);
+             if (potentialNumber !== null) {
+                 console.log('Interim number detected:', speechResult);
+                 setTranscript(speechResult); // Update state immediately
+             }
+        }
+
+        // Always update on final
         if (lastResult.isFinal) {
           console.log('Speech recognized (final):', speechResult);
           setTranscript(speechResult);

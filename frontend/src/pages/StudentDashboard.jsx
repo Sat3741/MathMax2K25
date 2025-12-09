@@ -204,175 +204,172 @@ const StudentDashboard = () => {
                                     Your practice consistency over the last year
                                 </Typography>
                                 
-                                {/* Heatmap Logic */}
-                                <Box sx={{ display: 'flex', flexDirection: 'column', overflowX: 'auto', p: 1 }}>
-                                    
-                                    {/* Month Labels - Aligned with First Week */}
-                                    <Box sx={{ display: 'flex', ml: '55px', mb: 1, position: 'relative', height: '20px' }}>
-                                        {(() => {
-                                            const today = new Date();
-                                            const startDate = new Date(today.getFullYear(), 0, 1);
+                                {/* Heatmap Logic - Month-Based Sections (Horizontal) */}
+                                <Box sx={{ display: 'flex', gap: 3, overflowX: 'auto', overflowY: 'hidden', p: 1, pb: 2 }}>
+                                    {(() => {
+                                        const today = new Date();
+                                        const startDate = new Date(today.getFullYear(), 0, 1);
+                                        const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+                                        const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+                                        const activityMap = new Map();
+                                        if (stats?.streak_data) {
+                                            stats.streak_data.forEach(d => activityMap.set(d.date, d));
+                                        }
+
+                                        // Group days by month
+                                        const monthGroups = [];
+                                        let currentDate = new Date(startDate);
+                                        
+                                        while (currentDate <= today) {
+                                            const monthIndex = currentDate.getMonth();
+                                            const year = currentDate.getFullYear();
                                             
-                                            const monthLabels = [];
-                                            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                                            // Get all days in this month
+                                            const monthDays = [];
+                                            const monthStart = new Date(year, monthIndex, 1);
+                                            const monthEnd = new Date(year, monthIndex + 1, 0);
                                             
-                                            // Calculate total weeks
-                                            const totalDays = Math.ceil((today - startDate) / (1000 * 60 * 60 * 24));
-                                            const totalWeeks = Math.ceil(totalDays / 7);
-                                            
-                                            // Track which week each month starts
-                                            let currentDate = new Date(startDate);
-                                            let lastMonth = -1;
-                                            
-                                            for (let w = 0; w < totalWeeks; w++) {
-                                                const currentMonth = currentDate.getMonth();
+                                            let dayDate = new Date(monthStart);
+                                            while (dayDate <= monthEnd) {
+                                                // Fix: Use local date string construction to avoid timezone shifts
+                                                // toISOString() converts to UTC, which can shift the day in +timezones (like India)
+                                                const year = dayDate.getFullYear();
+                                                const month = String(dayDate.getMonth() + 1).padStart(2, '0');
+                                                const day = String(dayDate.getDate()).padStart(2, '0');
+                                                const dateStr = `${year}-${month}-${day}`;
+
+                                                const data = activityMap.get(dateStr) || { score: 0, sessions: 0, assignments: 0 };
+                                                const totalActivity = (data.sessions || 0) + (data.assignments || 0);
                                                 
-                                                // When month changes, record this week index
-                                                if (currentMonth !== lastMonth) {
-                                                    monthLabels.push({
-                                                        week: w,
-                                                        label: months[currentMonth],
-                                                        position: w * 18 // 14px cell + 4px gap
-                                                    });
-                                                    lastMonth = currentMonth;
+                                                let bgColor = theme.palette.mode === 'dark' ? '#161b22' : '#ebedf0';
+                                                if (theme.palette.mode === 'dark') {
+                                                    if (totalActivity > 0) bgColor = '#0c4a6e';
+                                                    if (totalActivity > 2) bgColor = '#0369a1';
+                                                    if (totalActivity > 4) bgColor = '#0284c7';
+                                                    if (totalActivity > 6) bgColor = '#0ea5e9';
+                                                } else {
+                                                    if (totalActivity > 0) bgColor = '#bfdbfe';
+                                                    if (totalActivity > 2) bgColor = '#93c5fd';
+                                                    if (totalActivity > 4) bgColor = '#60a5fa';
+                                                    if (totalActivity > 6) bgColor = '#3b82f6';
                                                 }
                                                 
-                                                // Move to next week
-                                                currentDate.setDate(currentDate.getDate() + 7);
+                                                monthDays.push({
+                                                    date: dateStr,
+                                                    day: dayDate.getDate(),
+                                                    dayOfWeek: dayDate.getDay(),
+                                                    data: data,
+                                                    color: bgColor
+                                                });
+                                                
+                                                dayDate.setDate(dayDate.getDate() + 1);
                                             }
                                             
-                                            return monthLabels.map((item, i) => (
+                                            if (monthDays.length > 0) {
+                                                monthGroups.push({
+                                                    month: months[monthIndex],
+                                                    monthIndex: monthIndex,
+                                                    days: monthDays
+                                                });
+                                            }
+                                            
+                                            // Move to next month
+                                            currentDate = new Date(year, monthIndex + 1, 1);
+                                        }
+
+                                        return monthGroups.map((monthGroup, mIndex) => (
+                                            <Box key={mIndex} sx={{ minWidth: 'fit-content' }}>
+                                                {/* Month Header */}
                                                 <Typography 
-                                                    key={i} 
-                                                    variant="caption" 
-                                                    sx={{ 
-                                                        fontSize: '11px', 
-                                                        fontWeight: 500,
-                                                        position: 'absolute',
-                                                        left: `${item.position}px`,
-                                                        whiteSpace: 'nowrap',
-                                                        color: 'text.secondary'
-                                                    }}
+                                                    variant="subtitle2" 
+                                                    fontWeight="bold" 
+                                                    sx={{ mb: 1.5, color: 'text.primary' }}
                                                 >
-                                                    {item.label}
+                                                    {monthGroup.month}
                                                 </Typography>
-                                            ));
-                                        })()}
-                                    </Box>
-
-                                    <Box sx={{ display: 'flex' }}>
-                                        {/* Day Labels */}
-                                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: '4px', mr: 1.5, justifyContent: 'space-around', height: 'fit-content' }}>
-                                             {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, i) => (
-                                                 <Typography 
-                                                    key={i} 
-                                                    variant="caption" 
-                                                    sx={{ 
-                                                        height: 14, 
-                                                        lineHeight: '14px', 
-                                                        fontSize: '10px', 
-                                                        color: 'text.secondary',
-                                                        textAlign: 'right',
-                                                        minWidth: '25px'
-                                                    }}
-                                                >
-                                                     {i % 2 === 1 ? day : ''}
-                                                 </Typography>
-                                             ))}
-                                        </Box>
-
-                                        {/* Grid */}
-                                        <Box sx={{ display: 'flex', gap: '4px' }}>
-                                            {(() => {
-                                                const today = new Date();
                                                 
-                                                // Start from January 1st of current year
-                                                const startDate = new Date(today.getFullYear(), 0, 1); // Jan 1
-
-                                                const activityMap = new Map();
-                                                if (stats?.streak_data) {
-                                                    stats.streak_data.forEach(d => activityMap.set(d.date, d));
-                                                }
-
-                                                const weeks = [];
-                                                let currentDate = new Date(startDate);
+                                                {/* Day Labels */}
+                                                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 24px)', gap: '6px', mb: 0.5 }}>
+                                                    {dayLabels.map((label, i) => (
+                                                        <Typography 
+                                                            key={i} 
+                                                            variant="caption" 
+                                                            sx={{ 
+                                                                fontSize: '10px', 
+                                                                textAlign: 'center',
+                                                                color: 'text.secondary',
+                                                                fontWeight: 500
+                                                            }}
+                                                        >
+                                                            {label}
+                                                        </Typography>
+                                                    ))}
+                                                </Box>
                                                 
-                                                // Calculate weeks from Jan 1 to today
-                                                const totalDays = Math.ceil((today - startDate) / (1000 * 60 * 60 * 24));
-                                                const totalWeeks = Math.ceil(totalDays / 7);
-
-                                                for (let w = 0; w < totalWeeks; w++) {
-                                                    const weekDays = [];
-                                                    for (let d = 0; d < 7; d++) {
-                                                        const dateStr = currentDate.toISOString().split('T')[0];
-                                                        const data = activityMap.get(dateStr) || { score: 0, sessions: 0, assignments: 0 };
-                                                        
-                                                        const totalActivity = (data.sessions || 0) + (data.assignments || 0);
-                                                        
-                                                        // Blue color scheme instead of green
-                                                        let bgColor = theme.palette.mode === 'dark' ? '#161b22' : '#ebedf0';
-                                                        if (theme.palette.mode === 'dark') {
-                                                             if (totalActivity > 0) bgColor = '#0c4a6e'; // Dark blue
-                                                             if (totalActivity > 2) bgColor = '#0369a1'; // Medium blue
-                                                             if (totalActivity > 4) bgColor = '#0284c7'; // Bright blue
-                                                             if (totalActivity > 6) bgColor = '#0ea5e9'; // Light blue
-                                                        } else {
-                                                             if (totalActivity > 0) bgColor = '#bfdbfe'; // Light blue
-                                                             if (totalActivity > 2) bgColor = '#93c5fd'; // Medium light blue
-                                                             if (totalActivity > 4) bgColor = '#60a5fa'; // Medium blue
-                                                             if (totalActivity > 6) bgColor = '#3b82f6'; // Darker blue
-                                                        }
-
-                                                        weekDays.push({
-                                                            date: dateStr,
-                                                            data: data,
-                                                            color: bgColor
-                                                        });
-                                                        currentDate.setDate(currentDate.getDate() + 1);
-                                                        
-                                                        // Stop if we've reached today
-                                                        if (currentDate > today) break;
-                                                    }
-                                                    if (weekDays.length > 0) {
-                                                        weeks.push(weekDays);
-                                                    }
-                                                }
-
-                                                return weeks.map((week, wIndex) => (
-                                                    <Box key={wIndex} sx={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                        {week.map((day, dIndex) => (
-                                                            <Box 
-                                                                key={`${wIndex}-${dIndex}`}
-                                                                onClick={(e) => handleDayClick(e, day)}
-                                                                sx={{
-                                                                    width: 14,
-                                                                    height: 14,
-                                                                    borderRadius: '3px',
-                                                                    bgcolor: day.color,
-                                                                    cursor: 'pointer',
-                                                                    border: '1px solid',
+                                                {/* Days Grid */}
+                                                <Box sx={{ 
+                                                    display: 'grid', 
+                                                    gridTemplateColumns: 'repeat(7, 24px)', 
+                                                    gap: '6px',
+                                                    gridAutoRows: '24px'
+                                                }}>
+                                                    {/* Empty cells for days before month starts */}
+                                                    {monthGroup.days[0] && Array.from({ length: monthGroup.days[0].dayOfWeek }).map((_, i) => (
+                                                        <Box key={`empty-${i}`} />
+                                                    ))}
+                                                    
+                                                    {/* Actual day cells */}
+                                                    {monthGroup.days.map((day, dIndex) => (
+                                                        <Box
+                                                            key={dIndex}
+                                                            onClick={(e) => handleDayClick(e, day)}
+                                                            sx={{
+                                                                width: 24,
+                                                                height: 24,
+                                                                borderRadius: '4px',
+                                                                bgcolor: day.color,
+                                                                cursor: 'pointer',
+                                                                border: '1px solid',
+                                                                borderColor: theme.palette.mode === 'dark' 
+                                                                    ? 'rgba(255,255,255,0.05)' 
+                                                                    : 'rgba(0,0,0,0.05)',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                transition: 'all 0.2s ease',
+                                                                position: 'relative',
+                                                                '&:hover': {
+                                                                    transform: 'scale(1.15)',
                                                                     borderColor: theme.palette.mode === 'dark' 
-                                                                        ? 'rgba(255,255,255,0.05)' 
-                                                                        : 'rgba(0,0,0,0.05)',
-                                                                    transition: 'all 0.2s ease',
-                                                                    '&:hover': {
-                                                                        transform: 'scale(1.3)',
-                                                                        borderColor: theme.palette.mode === 'dark' 
-                                                                            ? 'rgba(255,255,255,0.4)' 
-                                                                            : 'rgba(0,0,0,0.3)',
-                                                                        zIndex: 10,
-                                                                        boxShadow: theme.palette.mode === 'dark'
-                                                                            ? '0 2px 8px rgba(0,0,0,0.5)'
-                                                                            : '0 2px 8px rgba(0,0,0,0.15)'
-                                                                    }
+                                                                        ? 'rgba(255,255,255,0.4)' 
+                                                                        : 'rgba(0,0,0,0.3)',
+                                                                    zIndex: 10,
+                                                                    boxShadow: theme.palette.mode === 'dark'
+                                                                        ? '0 2px 8px rgba(0,0,0,0.5)'
+                                                                        : '0 2px 8px rgba(0,0,0,0.15)'
+                                                                }
+                                                            }}
+                                                        >
+                                                            <Typography 
+                                                                variant="caption" 
+                                                                sx={{ 
+                                                                    fontSize: '9px',
+                                                                    fontWeight: 600,
+                                                                    color: theme.palette.mode === 'dark' 
+                                                                        ? 'rgba(255,255,255,0.6)' 
+                                                                        : 'rgba(0,0,0,0.5)',
+                                                                    lineHeight: 1
                                                                 }}
-                                                            />
-                                                        ))}
-                                                    </Box>
-                                                ));
-                                            })()}
-                                        </Box>
-                                    </Box>
+                                                            >
+                                                                {day.day}
+                                                            </Typography>
+                                                        </Box>
+                                                    ))}
+                                                </Box>
+                                            </Box>
+                                        ));
+                                    })()}
                                 </Box>
                                 
                                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'end', mt: 2, gap: 1 }}>
