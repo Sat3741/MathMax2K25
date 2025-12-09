@@ -6,11 +6,15 @@ import { useState, useEffect, useCallback, useRef } from 'react';
  */
 const useSpeechRecognition = () => {
   const [transcript, setTranscript] = useState('');
+  const [resultIndex, setResultIndex] = useState(0); 
+  const [isResultFinal, setIsResultFinal] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isSupported, setIsSupported] = useState(false);
   const [error, setError] = useState(null);
   
   const recognitionRef = useRef(null);
+
+  const [sessionId, setSessionId] = useState(0);
 
   // Check browser support on mount
   useEffect(() => {
@@ -26,22 +30,25 @@ const useSpeechRecognition = () => {
       recognition.lang = 'en-US';
       recognition.maxAlternatives = 1;
 
+      recognition.onstart = () => {
+        setIsListening(true);
+        setSessionId(prev => prev + 1);
+      };
+
       recognition.onresult = (event) => {
         // Get the latest result
-        const lastResult = event.results[event.results.length - 1];
+        const resultIdx = event.results.length - 1;
+        const lastResult = event.results[resultIdx];
         const speechResult = lastResult[0].transcript;
         
         // Optimize: Check interim results for numbers too if we need speed
-        // If it looks like a valid number, we can send it immediately
         if (!lastResult.isFinal) {
-             // Optional: Try to parse interim number. Creating a "provisional" transcript.
-             // But to be safe, we usually wait for final. 
-             // However, user asked for "immediately".
-             // Let's pass it if it's a clear number.
              const potentialNumber = parseSpokenNumber(speechResult);
              if (potentialNumber !== null) {
                  console.log('Interim number detected:', speechResult);
-                 setTranscript(speechResult); // Update state immediately
+                 setTranscript(speechResult); 
+                 setResultIndex(resultIdx);
+                 setIsResultFinal(false);
              }
         }
 
@@ -49,8 +56,13 @@ const useSpeechRecognition = () => {
         if (lastResult.isFinal) {
           console.log('Speech recognized (final):', speechResult);
           setTranscript(speechResult);
+          setResultIndex(resultIdx);
+          setIsResultFinal(true);
         }
       };
+// ... (rest of the code)
+// ...
+
 
       recognition.onerror = (event) => {
         console.error('Speech recognition error:', event.error);
@@ -119,6 +131,9 @@ const useSpeechRecognition = () => {
 
   return {
     transcript,
+    resultIndex,
+    isResultFinal,
+    sessionId,
     isListening,
     isSupported,
     error,
@@ -189,6 +204,26 @@ export const parseSpokenNumber = (text) => {
  */
 const convertWordsToNumber = (text, wordToNum) => {
   const words = text.split(/\s+/);
+  
+  // Strategy: valid numbers are either "composed" (twenty one) or "digits" (two one).
+  // Check if all words are simple digits (0-9)
+  const simpleDigits = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'];
+  const isAllSimpleDigits = words.every(w => simpleDigits.includes(w) || !isNaN(parseFloat(w)));
+
+  if (isAllSimpleDigits && words.length > 1) {
+     // Concatenate digits
+     let digitStr = "";
+     for (const word of words) {
+         if (wordToNum[word] !== undefined) {
+             digitStr += wordToNum[word];
+         } else if (!isNaN(parseFloat(word))) {
+             digitStr += word;
+         }
+     }
+     return parseInt(digitStr, 10);
+  }
+
+  // Existing logic for composed numbers
   let total = 0;
   let current = 0;
 

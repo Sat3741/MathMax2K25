@@ -28,17 +28,18 @@ import {
   RotateCcw,
   Trophy,
   Play,
-  AlertTriangle,
-  Gauge,
-  TrendingUp,
-  TrendingDown,
-  Clock,
-  Square,
-  ArrowRight,
-  XCircle,
-  BarChart2,
+  Swords,
   Mic,
   MicOff,
+  Square,
+  AlertTriangle,
+  XCircle,
+  BarChart2,
+  TrendingUp,
+  TrendingDown,
+  Gauge,
+  Clock,
+  ArrowRight,
 } from "lucide-react";
 import useSpeechRecognition, { parseSpokenNumber } from "../hooks/useSpeechRecognition";
 
@@ -104,7 +105,7 @@ const Practice = () => {
   const [topicHistory, setTopicHistory] = useState([]);
 
   // Voice Recognition
-  const { transcript, isListening, isSupported, startListening, stopListening, resetTranscript } = useSpeechRecognition();
+  const { transcript, resultIndex, isResultFinal, sessionId, isListening, isSupported, startListening, stopListening, resetTranscript } = useSpeechRecognition();
 
   const inputRef = useRef(null);
 
@@ -123,24 +124,35 @@ const Practice = () => {
     }
   }, [problem, phase]);
 
-  // Handle voice recognition transcript
+  // Track processed result indices to prevent spillover
+  const processedResultIndices = useRef(new Set());
+
+  // Clear tracking when problem changes
   useEffect(() => {
-    if (transcript && phase === 'playing' && problem) {
-      const parsed = parseSpokenNumber(transcript);
-      if (parsed !== null) {
-        const parsedStr = parsed.toString();
-        setUserAnswer(parsedStr);
-        resetTranscript();
-        
-        // Check if answer is correct and auto-advance
-        const isCorrect = Math.abs(parsed - problem.answer) < 0.001;
-        if (isCorrect) {
-          // Immediate advancement for voice
-          handleAnswer(true);
-        }
-      }
-    }
-  }, [transcript, phase, problem, resetTranscript]);
+    // We don't need to reset transcript if we track indices, but resetting keeps UI clean.
+    // Ideally, we keep the engine running.
+    // When new problem loads, we just ensure we ignore any PREVIOUS result indices.
+    // Since resultIndex increments, we can just track the set.
+    // However, if we want strict "ignore previous", we might want to know the "current" index baseline.
+    // But processedResultIndices is enough if we mark them as done.
+    
+    // Actually, to be safe against "late" finals from previous utterance:
+    // We can clear the buffer if we haven't already.
+    // But simple deduplication of resultIndex is usually sufficient for continuous.
+    setUserAnswer(""); 
+    inputRef.current?.focus();
+  }, [problem, flipKey]);
+
+ 
+  
+  // ... (existing code)
+  
+  // Render Input Section (Update Hint)
+  // Find where the input field is and add the hint near the microphone icon or below input
+  
+  // Note: I will need to use MultiReplaceFileContent to insert the hint because the view is far down.
+  // For this ReplaceFileContent, I will just do the Logic changes.
+
 
   // Timer countdown effect
   useEffect(() => {
@@ -623,6 +635,63 @@ const Practice = () => {
     }
   };
 
+  // Handle voice recognition transcript
+  useEffect(() => {
+    if (transcript && phase === 'playing' && problem) {
+      // Deduplication: Use composite key of SessionID + ResultIndex to handle engine restarts
+      const uniqueResultKey = `${sessionId}-${resultIndex}`;
+
+      // If we already processed this specific result loop, ignore it.
+      if (processedResultIndices.current.has(uniqueResultKey)) {
+          return;
+      }
+
+      const msg = transcript.toLowerCase().trim();
+      
+      // Command: "Clear"
+      if (msg === 'clear' || msg === 'delete' || msg === 'reset') {
+          console.log("Voice command: CLEAR");
+          setUserAnswer("");
+          resetTranscript();
+          return;
+      }
+      
+      // Command: "Skip"
+      if (msg === 'skip' || msg === 'next' || msg === 'pass') {
+          console.log("Voice command: SKIP");
+          resetTranscript();
+          handleSkip();
+          processedResultIndices.current.add(uniqueResultKey);
+          return;
+      }
+
+      const parsed = parseSpokenNumber(transcript);
+      if (parsed !== null) {
+        const parsedStr = parsed.toString();
+        
+        // Check correction BEFORE setting input
+        const isCorrect = Math.abs(parsed - problem.answer) < 0.001;
+        
+        if (isCorrect) {
+             // Correct Answer:
+             // 1. Mark this result index as processed
+             processedResultIndices.current.add(uniqueResultKey);
+             
+             // 2. Handle Answer (next question)
+             handleAnswer(true);
+             
+             // 3. Clear transcript for UI (optional but good)
+             resetTranscript();
+        } else {
+             // Incorrect:
+             if (parsedStr !== userAnswer) {
+                 setUserAnswer(parsedStr);
+             }
+        }
+      }
+    }
+  }, [transcript, resultIndex, sessionId, phase, problem, resetTranscript, handleAnswer, userAnswer]);
+
   // --- RENDERERS ---
 
   const formatTime = (seconds) => {
@@ -660,6 +729,42 @@ const Practice = () => {
         </Box>
 
           <Stack spacing={4}>
+            {/* MULTIPLAYER ARENA OPTION */}
+            <Card variant="outlined" sx={{ 
+                p: 3, 
+                bgcolor: 'background.default', 
+                border: '2px solid', 
+                borderColor: theme.palette.secondary.main,
+                position: 'relative',
+                overflow: 'visible' 
+            }}>
+                <Stack direction={{ xs: 'column', sm: 'row' }} alignItems="center" justifyContent="space-between" spacing={2}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Box sx={{ p: 1.5, bgcolor: 'secondary.main', borderRadius: 2, color: 'white' }}>
+                            <Swords size={28} />
+                        </Box>
+                        <Box>
+                            <Typography variant="h6" fontWeight="bold">
+                                Multiplayer Arena
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                                Ready to battle? Challenge friends online!
+                            </Typography>
+                        </Box>
+                    </Box>
+                    <Button 
+                        variant="contained" 
+                        color="secondary"
+                        onClick={() => navigate('/multiplayer')}
+                        startIcon={<Play />}
+                        size="large"
+                        sx={{ borderRadius: 3, px: 3, whiteSpace: 'nowrap' }}
+                    >
+                        Battle Now
+                    </Button>
+                </Stack>
+            </Card>
+
             {/* 1. Learning Mode Selector */}
             <Box>
                 <Typography gutterBottom variant="h6" fontWeight="bold">Learning Mode</Typography>
@@ -1249,6 +1354,25 @@ const Practice = () => {
                     </IconButton>
                   </span>
                 </Tooltip>
+
+                {/* Voice Hint */}
+                {isListening && (
+                    <Typography 
+                        variant="caption" 
+                        sx={{ 
+                            position: 'absolute',
+                            bottom: -25,
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            color: theme.palette.text.secondary,
+                            fontSize: '0.75rem',
+                            whiteSpace: 'nowrap',
+                            opacity: 0.8
+                        }}
+                    >
+                        Say "Clear" to reset
+                    </Typography>
+                )}
 
                 {answerFeedback === "wrong" && problem && (
                   <Typography
