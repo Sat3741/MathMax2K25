@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
 import { getAuthToken } from '../utils/authUtils';
+import API_BASE_URL from '../apiConfig';
 import {
     Container, Box, Typography, Grid, Card, CardContent, Button,
     List, ListItem, ListItemText, Divider, CircularProgress
@@ -19,7 +20,7 @@ const TeacherDashboard = () => {
     const fetchDashboard = async () => {
         try {
             const token = getAuthToken();
-            const response = await axios.get('http://localhost:8000/api/teacher/dashboard/', {
+            const response = await axios.get(`${API_BASE_URL}/teacher/dashboard/`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setDashboard(response.data);

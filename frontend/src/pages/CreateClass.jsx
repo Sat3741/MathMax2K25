@@ -2,6 +2,7 @@ import { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { getAuthToken } from '../utils/authUtils';
+import API_BASE_URL from '../apiConfig';
 import {
     Container,
     Typography,
@@ -25,7 +26,7 @@ const CreateClass = () => {
 
         try {
             const token = getAuthToken();
-            await axios.post('http://localhost:8000/api/teacher/classes/',
+            await axios.post(`${API_BASE_URL}/teacher/classes/`,
                 { name },
                 { headers: { Authorization: `Bearer ${token}` } }
             );

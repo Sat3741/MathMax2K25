@@ -1,4 +1,6 @@
 import axios from 'axios';
+import { getAuthToken } from '../../utils/authUtils';
+import API_BASE_URL from '../../apiConfig';
 
 const ClassManagement = () => {
     const [classes, setClasses] = useState([]);
@@ -32,7 +34,7 @@ const ClassManagement = () => {
     const fetchClasses = async () => {
         try {
             const token = getAuthToken();
-            const response = await axios.get('http://localhost:8000/api/auth/classes/', {
+            const response = await axios.get(`${API_BASE_URL}/auth/classes/`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setClasses(response.data);
@@ -47,7 +49,7 @@ const ClassManagement = () => {
     const fetchStudents = async () => {
         try {
             const token = getAuthToken();
-            const response = await axios.get('http://localhost:8000/api/auth/users/', {
+            const response = await axios.get(`${API_BASE_URL}/auth/users/`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             const mappedUsers = response.data.map(user => ({
@@ -81,7 +83,7 @@ const ClassManagement = () => {
         if (newClass.name.trim() && newClass.grade_level) {
             try {
                 const token = getAuthToken();
-                await axios.post('http://localhost:8000/api/auth/classes/', {
+                await axios.post(`${API_BASE_URL}/auth/classes/`, {
                     name: newClass.name,
                     grade_level: parseInt(newClass.grade_level),
                     class_teacher_name: newClass.class_teacher_name,
@@ -102,7 +104,7 @@ const ClassManagement = () => {
     const handleEditClass = async (id) => {
         try {
             const token = getAuthToken();
-            await axios.put(`http://localhost:8000/api/auth/classes/${id}/`, {
+            await axios.put(`${API_BASE_URL}/auth/classes/${id}/`, {
                 name: editData.name,
                 grade_level: parseInt(editData.grade_level),
                 class_teacher_name: editData.class_teacher_name,
@@ -121,7 +123,7 @@ const ClassManagement = () => {
     const handleEditSection = async (sectionId) => {
         try {
             const token = getAuthToken();
-            await axios.patch(`http://localhost:8000/api/auth/sections/${sectionId}/`, {
+            await axios.patch(`${API_BASE_URL}/auth/sections/${sectionId}/`, {
                 section_teacher: editSectionData.section_teacher
             }, {
                 headers: { Authorization: `Bearer ${token}` }
@@ -138,7 +140,7 @@ const ClassManagement = () => {
         if (window.confirm('Are you sure you want to delete this class?')) {
             try {
                 const token = getAuthToken();
-                await axios.delete(`http://localhost:8000/api/auth/classes/${id}/`, {
+                await axios.delete(`${API_BASE_URL}/auth/classes/${id}/`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 fetchClasses();

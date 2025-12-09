@@ -44,6 +44,7 @@ import {
 } from 'recharts';
 import axios from "axios";
 import { getAuthToken } from "../utils/authUtils";
+import API_BASE_URL from "../apiConfig";
 
 const PracticeResults = () => {
   const theme = useTheme();
@@ -91,7 +92,7 @@ const PracticeResults = () => {
       }
 
       const response = await axios.get(
-        "http://localhost:8000/api/student/practice/sessions/",
+        `${API_BASE_URL}/student/practice/sessions/`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }

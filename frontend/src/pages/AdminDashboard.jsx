@@ -3,6 +3,7 @@ import { Container, Typography, Grid, Card, CardContent, Box, useTheme, Circular
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { getAuthToken } from '../utils/authUtils';
+import API_BASE_URL from '../apiConfig';
 import { 
     People, Class, Groups, CloudUpload, Settings, 
     TrendingUp, AssignmentInd 
@@ -53,7 +54,7 @@ const AdminDashboard = () => {
         const fetchStats = async () => {
             try {
                 const token = getAuthToken();
-                const response = await axios.get('http://localhost:8000/api/auth/dashboard/stats/', {
+                const response = await axios.get(`${API_BASE_URL}/auth/dashboard/stats/`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 setStats(response.data);

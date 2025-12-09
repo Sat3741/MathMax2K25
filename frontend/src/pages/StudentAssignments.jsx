@@ -7,6 +7,7 @@ import { Play, Clock, ClipboardList } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { getAuthToken } from '../utils/authUtils';
+import API_BASE_URL from '../apiConfig';
 
 const StudentAssignments = () => {
     const [assignments, setAssignments] = useState([]);
@@ -21,7 +22,7 @@ const StudentAssignments = () => {
     const fetchAssignments = async () => {
         try {
             const token = getAuthToken();
-            const response = await axios.get('http://localhost:8000/api/student/assignments/', {
+            const response = await axios.get(`${API_BASE_URL}/student/assignments/`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setAssignments(response.data);

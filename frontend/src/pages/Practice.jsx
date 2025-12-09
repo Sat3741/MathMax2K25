@@ -42,6 +42,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import useSpeechRecognition, { parseSpokenNumber } from "../hooks/useSpeechRecognition";
+import API_BASE_URL from "../apiConfig";
 
 const TOPICS = [
   { value: "addition", label: "Addition", icon: "+" },
@@ -384,7 +385,7 @@ const Practice = () => {
       const token = getAuthToken();
       if (token) {
         const resp = await axios.post(
-          "http://localhost:8000/api/student/practice/",
+          `${API_BASE_URL}/student/practice/`,
           {
             score: scorePercentage,
             total_questions: totalQuestions,
@@ -453,7 +454,7 @@ const Practice = () => {
           setCurrentTopic(randomTopic);
 
           const response = await axios.get(
-            "http://localhost:8000/api/math/problem/",
+            `${API_BASE_URL}/math/problem/`,
             {
               params: { topic: randomTopic, difficulty: sessionDifficulty },
             }

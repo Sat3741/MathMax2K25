@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 import { getAuthToken } from '../utils/authUtils';
 import Avatar from '../components/Avatar';
+import API_BASE_URL from '../apiConfig';
 
 const Profile = () => {
     const theme = useTheme();
@@ -18,10 +19,10 @@ const Profile = () => {
             try {
                 const token = getAuthToken();
                 const endpoint = isStudent 
-                    ? 'http://localhost:8000/api/auth/student/profile/'
+                    ? `${API_BASE_URL}/auth/student/profile/`
                     : isTeacher 
-                        ? 'http://localhost:8000/api/auth/teacher/profile/'
-                        : 'http://localhost:8000/api/auth/me/';
+                        ? `${API_BASE_URL}/auth/teacher/profile/`
+                        : `${API_BASE_URL}/auth/me/`;
                 
                 const response = await axios.get(endpoint, {
                     headers: { Authorization: `Bearer ${token}` }
@@ -31,7 +32,7 @@ const Profile = () => {
                 // Fetch past practice sessions
                 if (isStudent) {
                     const sessionsResponse = await axios.get(
-                        'http://localhost:8000/api/student/practice/sessions/',
+                        `${API_BASE_URL}/student/practice/sessions/`,
                         { headers: { Authorization: `Bearer ${token}` } }
                     );
                     setPastSessions(sessionsResponse.data || []);

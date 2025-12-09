@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { getAuthToken } from '../utils/authUtils';
+import API_BASE_URL from '../apiConfig';
 import {
     Container,
     Typography,
@@ -26,7 +27,7 @@ const StudentsList = () => {
     const fetchStudents = async () => {
         try {
             const token = getAuthToken();
-            const response = await axios.get('http://localhost:8000/api/teacher/students/', {
+            const response = await axios.get(`${API_BASE_URL}/teacher/students/`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setStudents(response.data);

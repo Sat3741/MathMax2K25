@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { getAuthToken } from '../utils/authUtils';
+import API_BASE_URL from '../apiConfig';
 import {
     Container,
     Typography,
@@ -45,7 +46,7 @@ const CreateAssignment = () => {
     const fetchClasses = async () => {
         try {
             const token = getAuthToken();
-            const response = await axios.get('http://localhost:8000/api/teacher/classes/', {
+            const response = await axios.get(`${API_BASE_URL}/teacher/classes/`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setClasses(response.data);
@@ -57,7 +58,7 @@ const CreateAssignment = () => {
     const fetchGroups = async () => {
         try {
             const token = getAuthToken();
-            const response = await axios.get('http://localhost:8000/api/teacher/groups/', {
+            const response = await axios.get(`${API_BASE_URL}/teacher/groups/`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setGroups(response.data);
@@ -83,7 +84,7 @@ const CreateAssignment = () => {
                 due_date: formData.due_date || null
             };
             
-            await axios.post('http://localhost:8000/api/teacher/assignments/',
+            await axios.post(`${API_BASE_URL}/teacher/assignments/`,
                 payload,
                 { headers: { Authorization: `Bearer ${token}` } }
             );

@@ -1,6 +1,7 @@
 import { createContext, useState, useContext, useEffect } from 'react';
 import axios from 'axios';
 import { getAuthToken, clearAuthTokens } from '../utils/authUtils';
+import API_BASE_URL from '../apiConfig';
 
 const AuthContext = createContext(null);
 
@@ -20,7 +21,7 @@ export const AuthProvider = ({ children }) => {
     }, []);
 
     const login = async (username, password) => {
-        const response = await axios.post('http://localhost:8000/api/auth/login/', {
+        const response = await axios.post(`${API_BASE_URL}/auth/login/`, {
             username,
             password
         });
@@ -35,7 +36,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     const adminLogin = async (username, password) => {
-        const response = await axios.post('http://localhost:8000/api/auth/admin/login/', {
+        const response = await axios.post(`${API_BASE_URL}/auth/admin/login/`, {
             username,
             password
         });
@@ -50,7 +51,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     const signup = async (userData) => {
-        const response = await axios.post('http://localhost:8000/api/auth/create-user/', userData);
+        const response = await axios.post(`${API_BASE_URL}/auth/create-user/`, userData);
         return response.data;
     };
 

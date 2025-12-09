@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getAuthToken } from '../../utils/authUtils';
+import API_BASE_URL from '../../apiConfig';
 import { 
     Container, Typography, Box, Card, CardContent, Grid, Button, 
     Stepper, Step, StepLabel, FormControl, InputLabel, Select, MenuItem,
@@ -40,7 +41,7 @@ const BulkOperations = () => {
     const fetchClasses = async () => {
         try {
             const token = getAuthToken();
-            const response = await axios.get('http://localhost:8000/api/auth/classes/', {
+            const response = await axios.get(`${API_BASE_URL}/auth/classes/`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setClasses(response.data);
@@ -52,7 +53,7 @@ const BulkOperations = () => {
     const fetchStudentCount = async () => {
         try {
             const token = getAuthToken();
-            const response = await axios.get('http://localhost:8000/api/auth/users/', {
+            const response = await axios.get(`${API_BASE_URL}/auth/users/`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             
@@ -84,7 +85,7 @@ const BulkOperations = () => {
                 formData.append('file', uploadFile);
 
                 const response = await axios.post(
-                    'http://localhost:8000/api/auth/bulk-upload/',
+                    `${API_BASE_URL}/auth/bulk-upload/`,
                     formData,
                     {
                         headers: {
@@ -133,7 +134,7 @@ const BulkOperations = () => {
             try {
                 const token = getAuthToken();
                 await axios.post(
-                    'http://localhost:8000/api/auth/bulk-promote/',
+                    `${API_BASE_URL}/auth/bulk-promote/`,
                     {
                         from_grade: parseInt(promoteData.fromClass),
                         to_grade: parseInt(promoteData.toClass)

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getAuthToken } from '../../utils/authUtils';
+import API_BASE_URL from '../../apiConfig';
 import { 
     Container, Typography, Box, Card, CardContent, Button, TextField, 
     InputAdornment, Table, TableBody, TableCell, TableContainer, 
@@ -47,7 +48,7 @@ const UserManagement = () => {
     const fetchUsers = async () => {
         try {
             const token = getAuthToken();
-            const response = await axios.get('http://localhost:8000/api/auth/users/', {
+            const response = await axios.get(`${API_BASE_URL}/auth/users/`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             // Map API fields to frontend fields
@@ -66,7 +67,7 @@ const UserManagement = () => {
     const fetchClasses = async () => {
         try {
             const token = getAuthToken();
-            const response = await axios.get('http://localhost:8000/api/auth/classes/', {
+            const response = await axios.get(`${API_BASE_URL}/auth/classes/`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setClasses(response.data);
@@ -78,7 +79,7 @@ const UserManagement = () => {
     const fetchSections = async () => {
         try {
             const token = getAuthToken();
-            const response = await axios.get('http://localhost:8000/api/auth/sections/', {
+            const response = await axios.get(`${API_BASE_URL}/auth/sections/`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setSections(response.data);
@@ -124,7 +125,7 @@ const UserManagement = () => {
                 is_teacher: newUser.role === 'teacher',
             };
 
-            await axios.post('http://localhost:8000/api/auth/create-user/', payload, {
+            await axios.post(`${API_BASE_URL}/auth/create-user/`, payload, {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
@@ -149,7 +150,7 @@ const UserManagement = () => {
         if (window.confirm('Are you sure you want to delete this user?')) {
             try {
                 const token = getAuthToken();
-                await axios.delete(`http://localhost:8000/api/auth/users/${id}/`, {
+                await axios.delete(`${API_BASE_URL}/auth/users/${id}/`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 fetchUsers();
@@ -178,7 +179,7 @@ const UserManagement = () => {
                 is_teacher: editFormData.role === 'teacher',
             };
 
-            await axios.patch(`http://localhost:8000/api/auth/users/${editUserId}/`, payload, {
+            await axios.patch(`${API_BASE_URL}/auth/users/${editUserId}/`, payload, {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
@@ -194,7 +195,7 @@ const UserManagement = () => {
         try {
             const token = getAuthToken();
             const response = await axios.post(
-                `http://localhost:8000/api/auth/users/${userId}/reset-password/`,
+                `${API_BASE_URL}/auth/users/${userId}/reset-password/`,
                 {},
                 { headers: { Authorization: `Bearer ${token}` } }
             );

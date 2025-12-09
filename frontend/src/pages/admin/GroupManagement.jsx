@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getAuthToken } from '../../utils/authUtils';
+import API_BASE_URL from '../../apiConfig';
 import { 
     Container, Typography, Box, Card, CardContent, Button, Grid, 
     Dialog, DialogTitle, DialogContent, DialogActions, TextField,
@@ -31,7 +32,7 @@ const GroupManagement = () => {
     const fetchGroups = async () => {
         try {
             const token = getAuthToken();
-            const response = await axios.get('http://localhost:8000/api/auth/groups/', {
+            const response = await axios.get(`${API_BASE_URL}/auth/groups/`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setGroups(response.data);
@@ -46,7 +47,7 @@ const GroupManagement = () => {
     const fetchStudents = async () => {
         try {
             const token = getAuthToken();
-            const response = await axios.get('http://localhost:8000/api/auth/users/', {
+            const response = await axios.get(`${API_BASE_URL}/auth/users/`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setStudents(response.data.filter(user => user.is_student));
@@ -59,7 +60,7 @@ const GroupManagement = () => {
         if (newGroupName.trim()) {
             try {
                 const token = getAuthToken();
-                await axios.post('http://localhost:8000/api/auth/groups/', {
+                await axios.post(`${API_BASE_URL}/auth/groups/`, {
                     name: newGroupName,
                     description: newGroupDescription,
                     student_ids: []
@@ -81,7 +82,7 @@ const GroupManagement = () => {
         if (window.confirm('Are you sure you want to delete this group?')) {
             try {
                 const token = getAuthToken();
-                await axios.delete(`http://localhost:8000/api/auth/groups/${id}/`, {
+                await axios.delete(`${API_BASE_URL}/auth/groups/${id}/`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 fetchGroups();
@@ -115,7 +116,7 @@ const GroupManagement = () => {
     const handleSaveMembers = async () => {
         try {
             const token = getAuthToken();
-            await axios.patch(`http://localhost:8000/api/auth/groups/${selectedGroup.id}/`, {
+            await axios.patch(`${API_BASE_URL}/auth/groups/${selectedGroup.id}/`, {
                 student_ids: selectedStudents
             }, {
                 headers: { Authorization: `Bearer ${token}` }

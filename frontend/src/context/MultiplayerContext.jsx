@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from './AuthContext';
+import { WS_BASE_URL } from '../apiConfig';
 
 const MultiplayerContext = createContext(null);
 
@@ -23,7 +24,7 @@ export const MultiplayerProvider = ({ children }) => {
 
         // Use ws:// for local, wss:// for production
         // In channels, path is ws/game/<room_code>/
-        const wsUrl = `ws://localhost:8000/ws/game/${roomCode}/`;
+        const wsUrl = `${WS_BASE_URL}/game/${roomCode}/`;
         console.log("Connecting to", wsUrl);
         
         const ws = new WebSocket(wsUrl);

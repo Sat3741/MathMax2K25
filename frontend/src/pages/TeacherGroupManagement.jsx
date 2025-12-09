@@ -28,6 +28,7 @@ import {
 import { Add, Edit, Delete, Group as GroupIcon } from '@mui/icons-material';
 import axios from 'axios';
 import { getAuthToken } from '../utils/authUtils';
+import API_BASE_URL from '../apiConfig';
 
 const TeacherGroupManagement = () => {
     const [groups, setGroups] = useState([]);
@@ -50,7 +51,7 @@ const TeacherGroupManagement = () => {
     const fetchGroups = async () => {
         try {
             const token = getAuthToken();
-            const response = await axios.get('http://localhost:8000/api/teacher/groups/', {
+            const response = await axios.get(`${API_BASE_URL}/teacher/groups/`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setGroups(response.data);
@@ -62,7 +63,7 @@ const TeacherGroupManagement = () => {
     const fetchStudents = async () => {
         try {
             const token = getAuthToken();
-            const response = await axios.get('http://localhost:8000/api/teacher/students/', {
+            const response = await axios.get(`${API_BASE_URL}/teacher/students/`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setStudents(response.data);
@@ -110,14 +111,14 @@ const TeacherGroupManagement = () => {
             const token = getAuthToken();
             if (editingGroup) {
                 await axios.put(
-                    `http://localhost:8000/api/teacher/groups/${editingGroup.id}/`,
+                    `${API_BASE_URL}/teacher/groups/${editingGroup.id}/`,
                     formData,
                     { headers: { Authorization: `Bearer ${token}` } }
                 );
                 setMessage('Group updated successfully!');
             } else {
                 await axios.post(
-                    'http://localhost:8000/api/teacher/groups/',
+                    `${API_BASE_URL}/teacher/groups/`,
                     formData,
                     { headers: { Authorization: `Bearer ${token}` } }
                 );
@@ -136,7 +137,7 @@ const TeacherGroupManagement = () => {
 
         try {
             const token = getAuthToken();
-            await axios.delete(`http://localhost:8000/api/teacher/groups/${groupId}/`, {
+            await axios.delete(`${API_BASE_URL}/teacher/groups/${groupId}/`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setMessage('Group deleted successfully!');

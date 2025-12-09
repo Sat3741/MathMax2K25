@@ -5,6 +5,7 @@ import { TrendingUp, Rocket, User, Trophy, Flame } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 import { getAuthToken } from '../utils/authUtils';
+import API_BASE_URL from '../apiConfig';
 
 const StudentDashboard = () => {
     const navigate = useNavigate();
@@ -39,7 +40,7 @@ const StudentDashboard = () => {
                     return;
                 }
                 
-                const response = await axios.get('http://localhost:8000/api/auth/student/profile/', {
+                const response = await axios.get(`${API_BASE_URL}/auth/student/profile/`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 setStats(response.data);
