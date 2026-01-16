@@ -17,6 +17,7 @@ import UserManagement from './pages/admin/UserManagement';
 import GroupManagement from './pages/admin/GroupManagement';
 import BulkOperations from './pages/admin/BulkOperations';
 import StudentDashboard from './pages/StudentDashboard';
+import MathDashboard from './pages/MathDashboard';
 import Profile from './pages/Profile';
 import StudentAssignments from './pages/StudentAssignments';
 import TeacherGroupManagement from './pages/TeacherGroupManagement';
@@ -44,6 +45,8 @@ function App() {
                                 <Route path="/practice/results" element={<PracticeResults />} />
                                 <Route path="/level-info" element={<LevelInfo />} />
                                 <Route path="/student/dashboard" element={<StudentDashboard />} />
+                                <Route path="/student/math" element={<MathDashboard />} />
+                                <Route path="/student/practice/:levelCode" element={<Practice />} />
                                 <Route path="/student/assignments" element={<StudentAssignments />} />
                                 <Route path="/profile" element={<Profile />} />
                                 <Route path="/login" element={<Login />} />

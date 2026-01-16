@@ -24,8 +24,8 @@ urlpatterns = [
     
     # Admin User Management
     path('users/', UserListView.as_view(), name='user-list'),
-    path('users/<int:pk>/', UserUpdateView.as_view(), name='user-detail'),
     path('users/<int:pk>/reset-password/', UserPasswordResetView.as_view(), name='user-password-reset'),
+    path('users/<int:pk>/', UserUpdateView.as_view(), name='user-detail'),
     path('dashboard/stats/', DashboardStatsView.as_view(), name='dashboard-stats'),
     path('bulk-upload/', BulkUserUploadView.as_view(), name='bulk-upload'),
     path('bulk-promote/', BulkPromoteView.as_view(), name='bulk-promote'),

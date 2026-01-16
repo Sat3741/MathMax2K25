@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import {
   Container,
@@ -54,6 +54,7 @@ const TOPICS = [
 const Practice = () => {
   const theme = useTheme();
   const navigate = useNavigate();
+  const { levelCode } = useParams();
   const [phase, setPhase] = useState("setup");
 
   // Setup State
@@ -81,7 +82,7 @@ const Practice = () => {
   const [digitCount1, setDigitCount1] = useState(1);
   // Box 3: Digits for second number
   const [digitCount2, setDigitCount2] = useState(1);
-  
+
   const [customOperator, setCustomOperator] = useState('addition');
   const [allowNegative, setAllowNegative] = useState(false); // For subtraction
   const [allowDecimal, setAllowDecimal] = useState(false); // For division
@@ -128,6 +129,18 @@ const Practice = () => {
   // Track processed result indices to prevent spillover
   const processedResultIndices = useRef(new Set());
 
+  // Initialize Level Mode if levelCode is present
+  useEffect(() => {
+    if (levelCode) {
+      setPracticeType('level');
+      setPhase('playing');
+      setQuestionCount(999); // Infinite by default or until user quits
+      // Optionally fetch level info to display title? 
+      // For now, just start.
+      setTimeout(() => fetchProblem(true), 100);
+    }
+  }, [levelCode]);
+
   // Clear tracking when problem changes
   useEffect(() => {
     // We don't need to reset transcript if we track indices, but resetting keeps UI clean.
@@ -136,21 +149,21 @@ const Practice = () => {
     // Since resultIndex increments, we can just track the set.
     // However, if we want strict "ignore previous", we might want to know the "current" index baseline.
     // But processedResultIndices is enough if we mark them as done.
-    
+
     // Actually, to be safe against "late" finals from previous utterance:
     // We can clear the buffer if we haven't already.
     // But simple deduplication of resultIndex is usually sufficient for continuous.
-    setUserAnswer(""); 
+    setUserAnswer("");
     inputRef.current?.focus();
   }, [problem, flipKey]);
 
- 
-  
+
+
   // ... (existing code)
-  
+
   // Render Input Section (Update Hint)
   // Find where the input field is and add the hint near the microphone icon or below input
-  
+
   // Note: I will need to use MultiReplaceFileContent to insert the hint because the view is far down.
   // For this ReplaceFileContent, I will just do the Logic changes.
 
@@ -232,7 +245,7 @@ const Practice = () => {
 
   const generateCustomProblem = () => {
     let num1, num2, answer, symbol;
-    
+
     // Helper helpers
     const getMin = (d) => Math.pow(10, d - 1);
     const getMax = (d) => Math.pow(10, d) - 1;
@@ -254,15 +267,15 @@ const Practice = () => {
         num1 = getRandomInt(min1, max1);
         num2 = getRandomInt(min2, max2);
         if (!allowNegative && num2 > num1) {
-             // If negative not allowed and num2 > num1, we have a problem.
-             // We can satisfy digit counts strictly OR satisfy non-negative.
-             // If we swap, we might break digit count rules (e.g. 2-digit minus 3-digit).
-             // If D1 != D2, swapping breaks D1/D2 assignment.
-             // Strategy: Regenerate num2 until <= num1, OR if impossible (min2 > max1), swap and accept digit count mismatch?
-             // User preference usually implies "Big number - Small number".
-             // Let's swap if needed but strictly speaking it swaps the digit counts too.
-             // Simple approach: JUST SWAP. User cares about difficulty roughly.
-             [num1, num2] = [num2, num1];
+          // If negative not allowed and num2 > num1, we have a problem.
+          // We can satisfy digit counts strictly OR satisfy non-negative.
+          // If we swap, we might break digit count rules (e.g. 2-digit minus 3-digit).
+          // If D1 != D2, swapping breaks D1/D2 assignment.
+          // Strategy: Regenerate num2 until <= num1, OR if impossible (min2 > max1), swap and accept digit count mismatch?
+          // User preference usually implies "Big number - Small number".
+          // Let's swap if needed but strictly speaking it swaps the digit counts too.
+          // Simple approach: JUST SWAP. User cares about difficulty roughly.
+          [num1, num2] = [num2, num1];
         }
         answer = num1 - num2;
         symbol = '-';
@@ -275,54 +288,54 @@ const Practice = () => {
         break;
       case 'division':
         if (allowDecimal) {
-            num1 = getRandomInt(min1, max1);
-            num2 = getRandomInt(min2, max2);
-            // Avoid division by zero (min is at least 1, so safe usually)
-            if (num2 === 0) num2 = 1;
-            answer = parseFloat((num1 / num2).toFixed(2));
+          num1 = getRandomInt(min1, max1);
+          num2 = getRandomInt(min2, max2);
+          // Avoid division by zero (min is at least 1, so safe usually)
+          if (num2 === 0) num2 = 1;
+          answer = parseFloat((num1 / num2).toFixed(2));
         } else {
-            // Strict integer division with digit constraints is hard to guarantee 100% of time randomly.
-            // Approach: Generate Divisor (num2) using D2.
-            // Generate Quotient such that Divisor * Quotient has D1 digits.
-            // This ensures Num1 (Dividend) has D1 digits and Num2 (Divisor) has D2 digits.
-            
-            num2 = getRandomInt(min2, max2);
-            if (num2 === 0) num2 = 1;
+          // Strict integer division with digit constraints is hard to guarantee 100% of time randomly.
+          // Approach: Generate Divisor (num2) using D2.
+          // Generate Quotient such that Divisor * Quotient has D1 digits.
+          // This ensures Num1 (Dividend) has D1 digits and Num2 (Divisor) has D2 digits.
 
-            // We need Product P s.t. min1 <= P <= max1
-            // P = num2 * Quotient
-            // So min1/num2 <= Quotient <= max1/num2
-            const qMin = Math.ceil(min1 / num2);
-            const qMax = Math.floor(max1 / num2);
+          num2 = getRandomInt(min2, max2);
+          if (num2 === 0) num2 = 1;
 
-            if (qMin > qMax) {
-                // Impossible to fit strict digit counts (e.g. 2 digit / 3 digit = integer)
-                // Fallback: Just generate num1 and num2 and do floor division? 
-                // Or generate num2(D2) and random simple quotient?
-                // Left fallback: num1 with D1, num2 with D2.
-                // Just construct a valid problem ignoring strict D1 for dividend if necessary?
-                // Let's try to honor D1 for Dividend if possible.
-                // If impossible, we relax D1.
-                const quotient = getRandomInt(1, 12);
-                num1 = num2 * quotient;
-            } else {
-                const quotient = getRandomInt(qMin, qMax);
-                num1 = num2 * quotient;
-            }
-            answer = num1 / num2;
+          // We need Product P s.t. min1 <= P <= max1
+          // P = num2 * Quotient
+          // So min1/num2 <= Quotient <= max1/num2
+          const qMin = Math.ceil(min1 / num2);
+          const qMax = Math.floor(max1 / num2);
+
+          if (qMin > qMax) {
+            // Impossible to fit strict digit counts (e.g. 2 digit / 3 digit = integer)
+            // Fallback: Just generate num1 and num2 and do floor division? 
+            // Or generate num2(D2) and random simple quotient?
+            // Left fallback: num1 with D1, num2 with D2.
+            // Just construct a valid problem ignoring strict D1 for dividend if necessary?
+            // Let's try to honor D1 for Dividend if possible.
+            // If impossible, we relax D1.
+            const quotient = getRandomInt(1, 12);
+            num1 = num2 * quotient;
+          } else {
+            const quotient = getRandomInt(qMin, qMax);
+            num1 = num2 * quotient;
+          }
+          answer = num1 / num2;
         }
         symbol = '÷';
         break;
       default:
-         num1=1; num2=1; answer=2; symbol='+';
+        num1 = 1; num2 = 1; answer = 2; symbol = '+';
     }
 
     return {
-        id: Date.now(),
-        question: `${num1} ${symbol} ${num2}`,
-        answer: answer,
-        difficulty: 1.0, 
-        topic: customOperator
+      id: Date.now(),
+      question: `${num1} ${symbol} ${num2}`,
+      answer: answer,
+      difficulty: 1.0,
+      topic: customOperator
     };
   };
 
@@ -335,7 +348,7 @@ const Practice = () => {
     // Calculate Metrics
     const totalTime = timeHistory.reduce((a, b) => a + b, 0);
     const avgTime = timeHistory.length > 0 ? totalTime / timeHistory.length : 0;
-    
+
     // Use timeHistory.length as it's the most reliable count of answered questions
     // (updated before this function is called)
     const totalQuestions = timeHistory.length;
@@ -348,7 +361,7 @@ const Practice = () => {
     const avgDifficulty =
       difficultyHistory.length > 0
         ? difficultyHistory.reduce((a, b) => a + b, 0) /
-          difficultyHistory.length
+        difficultyHistory.length
         : difficulty;
 
     const sessionData = {
@@ -446,26 +459,41 @@ const Practice = () => {
     try {
       let problemData = null;
 
-      // Use current adaptive difficulty
-      if (practiceType === 'adaptive') {
-          const randomTopic =
-            selectedTopics[Math.floor(Math.random() * selectedTopics.length)];
-          
-          setCurrentTopic(randomTopic);
+      if (levelCode) {
+        // Level Mode
+        const token = getAuthToken();
+        const response = await axios.get(
+          `${API_BASE_URL}/math/problem/`,
+          {
+            params: { level_code: levelCode },
+            headers: token ? { Authorization: `Bearer ${token}` } : {}
+          }
+        );
+        problemData = response.data;
 
-          const response = await axios.get(
-            `${API_BASE_URL}/math/problem/`,
-            {
-              params: { topic: randomTopic, difficulty: sessionDifficulty },
-            }
-          );
-          problemData = response.data;
+        // Use backend provided metadata
+        setSessionDifficulty(problemData.difficulty || 1);
+
+      } else if (practiceType === 'adaptive') {
+        // Adaptive logic (existing)
+        const randomTopic =
+          selectedTopics[Math.floor(Math.random() * selectedTopics.length)];
+
+        setCurrentTopic(randomTopic);
+
+        const response = await axios.get(
+          `${API_BASE_URL}/math/problem/`,
+          {
+            params: { topic: randomTopic, difficulty: sessionDifficulty },
+          }
+        );
+        problemData = response.data;
       } else {
-          // Custom Mode
-          problemData = generateCustomProblem();
-          setCurrentTopic(customOperator);
-          // Small delay to simulate fetch
-          await new Promise(r => setTimeout(r, 50));
+        // Custom Mode
+        problemData = generateCustomProblem();
+        setCurrentTopic(customOperator);
+        // Small delay to simulate fetch
+        await new Promise(r => setTimeout(r, 50));
       }
 
       // Set problem after short animation
@@ -513,13 +541,13 @@ const Practice = () => {
   const handleSkip = () => {
     // Record skip in topic history
     setTopicHistory(prev => [...prev, { topic: currentTopic, correct: null, skipped: true }]);
-    
+
     // Increment skipped counter
     setSkippedQuestions(prev => prev + 1);
-    
+
     // Add placeholder time (0 seconds for skipped questions)
     setTimeHistory((prev) => [...prev, 0]);
-    
+
     // Fetch next problem
     fetchProblem();
   };
@@ -540,7 +568,7 @@ const Practice = () => {
       topic: currentTopic,
       timestamp: Date.now(),
     };
-    
+
     setTopicHistory(prev => [...prev, { topic: currentTopic, correct: isCorrect }]);
 
     setRecentPerformance((prev) => {
@@ -564,12 +592,12 @@ const Practice = () => {
     const recentAccuracy =
       recentPerformance.length > 0
         ? recentPerformance.filter((p) => p.correct).length /
-          recentPerformance.length
+        recentPerformance.length
         : currentAccuracy;
     const avgRecentTime =
       recentPerformance.length > 0
         ? recentPerformance.reduce((sum, p) => sum + p.timeTaken, 0) /
-          recentPerformance.length
+        recentPerformance.length
         : timeTaken;
 
     let diffChange = 0;
@@ -582,10 +610,10 @@ const Practice = () => {
         currentAccuracy > 0.9
           ? 1.3
           : currentAccuracy > 0.8
-          ? 1.1
-          : currentAccuracy > 0.7
-          ? 1.0
-          : 0.9;
+            ? 1.1
+            : currentAccuracy > 0.7
+              ? 1.0
+              : 0.9;
       const consistencyFactor =
         recentAccuracy > 0.85 ? 1.2 : recentAccuracy > 0.75 ? 1.0 : 0.9;
 
@@ -644,50 +672,50 @@ const Practice = () => {
 
       // If we already processed this specific result loop, ignore it.
       if (processedResultIndices.current.has(uniqueResultKey)) {
-          return;
+        return;
       }
 
       const msg = transcript.toLowerCase().trim();
-      
+
       // Command: "Clear"
       if (msg === 'clear' || msg === 'delete' || msg === 'reset') {
-          console.log("Voice command: CLEAR");
-          setUserAnswer("");
-          resetTranscript();
-          return;
+        console.log("Voice command: CLEAR");
+        setUserAnswer("");
+        resetTranscript();
+        return;
       }
-      
+
       // Command: "Skip"
       if (msg === 'skip' || msg === 'next' || msg === 'pass') {
-          console.log("Voice command: SKIP");
-          resetTranscript();
-          handleSkip();
-          processedResultIndices.current.add(uniqueResultKey);
-          return;
+        console.log("Voice command: SKIP");
+        resetTranscript();
+        handleSkip();
+        processedResultIndices.current.add(uniqueResultKey);
+        return;
       }
 
       const parsed = parseSpokenNumber(transcript);
       if (parsed !== null) {
         const parsedStr = parsed.toString();
-        
+
         // Check correction BEFORE setting input
         const isCorrect = Math.abs(parsed - problem.answer) < 0.001;
-        
+
         if (isCorrect) {
-             // Correct Answer:
-             // 1. Mark this result index as processed
-             processedResultIndices.current.add(uniqueResultKey);
-             
-             // 2. Handle Answer (next question)
-             handleAnswer(true);
-             
-             // 3. Clear transcript for UI (optional but good)
-             resetTranscript();
+          // Correct Answer:
+          // 1. Mark this result index as processed
+          processedResultIndices.current.add(uniqueResultKey);
+
+          // 2. Handle Answer (next question)
+          handleAnswer(true);
+
+          // 3. Clear transcript for UI (optional but good)
+          resetTranscript();
         } else {
-             // Incorrect:
-             if (parsedStr !== userAnswer) {
-                 setUserAnswer(parsedStr);
-             }
+          // Incorrect:
+          if (parsedStr !== userAnswer) {
+            setUserAnswer(parsedStr);
+          }
         }
       }
     }
@@ -709,13 +737,11 @@ const Practice = () => {
         p: 3,
         borderRadius: 4,
         boxShadow: theme.shadows[8],
-        background: `linear-gradient(135deg, ${
-          theme.palette.background.paper
-        } 0%, ${
-          theme.palette.mode === "dark"
+        background: `linear-gradient(135deg, ${theme.palette.background.paper
+          } 0%, ${theme.palette.mode === "dark"
             ? "rgba(25, 25, 35, 0.8)"
             : "rgba(245, 245, 255, 0.8)"
-        } 100%)`,
+          } 100%)`,
       }}
     >
       <CardContent>
@@ -729,215 +755,215 @@ const Practice = () => {
           </Typography>
         </Box>
 
-          <Stack spacing={4}>
-            {/* MULTIPLAYER ARENA OPTION */}
-            <Card variant="outlined" sx={{ 
-                p: 3, 
-                bgcolor: 'background.default', 
-                border: '2px solid', 
-                borderColor: theme.palette.secondary.main,
-                position: 'relative',
-                overflow: 'visible' 
-            }}>
-                <Stack direction={{ xs: 'column', sm: 'row' }} alignItems="center" justifyContent="space-between" spacing={2}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Box sx={{ p: 1.5, bgcolor: 'secondary.main', borderRadius: 2, color: 'white' }}>
-                            <Swords size={28} />
-                        </Box>
-                        <Box>
-                            <Typography variant="h6" fontWeight="bold">
-                                Multiplayer Arena
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                                Ready to battle? Challenge friends online!
-                            </Typography>
-                        </Box>
-                    </Box>
-                    <Button 
-                        variant="contained" 
-                        color="secondary"
-                        onClick={() => navigate('/multiplayer')}
-                        startIcon={<Play />}
-                        size="large"
-                        sx={{ borderRadius: 3, px: 3, whiteSpace: 'nowrap' }}
-                    >
-                        Battle Now
-                    </Button>
-                </Stack>
-            </Card>
-
-            {/* 1. Learning Mode Selector */}
-            <Box>
-                <Typography gutterBottom variant="h6" fontWeight="bold">Learning Mode</Typography>
-                <ToggleButtonGroup
-                    value={practiceType}
-                    exclusive
-                    onChange={(e, val) => { if(val) setPracticeType(val); }}
-                    fullWidth
-                    sx={{ mb: 2 }}
-                >
-                    <ToggleButton value="custom" color="primary" sx={{ py: 2 }}>
-                        <Typography fontWeight="bold">Custom Practice</Typography>
-                    </ToggleButton>
-                    <ToggleButton value="adaptive" color="secondary" sx={{ py: 2 }}>
-                         <Typography fontWeight="bold">Adaptive Learning</Typography>
-                    </ToggleButton>
-                </ToggleButtonGroup>
-            </Box>
-            
-            {/* 2. CUSTOM MODE SETTINGS - 3 BOX LAYOUT */}
-            {practiceType === 'custom' && (
-                <Stack spacing={3} sx={{ p: 3, bgcolor: 'background.default', borderRadius: 2 }}>
-                    
-                    <Typography gutterBottom fontWeight="bold" variant="h6">Configure Problem</Typography>
-                    
-                    <Grid container spacing={4} justifyContent="center" alignItems="center">
-                        {/* BOX 1: Digits for Operand 1 */}
-                        <Grid item xs={12} md={4}>
-                            <Card variant="outlined" sx={{ p: 2, textAlign: 'center', height: '100%' }}>
-                                <Typography variant="caption" fontWeight="bold" color="text.secondary">FIRST NUMBER</Typography>
-                                <Typography variant="h4" color="primary.main" sx={{ my: 1 }}>{digitCount1}</Typography>
-                                <Typography variant="body2" sx={{ mb: 2 }}>Digits</Typography>
-                                <Slider
-                                    value={digitCount1}
-                                    onChange={(e, v) => setDigitCount1(v)}
-                                    min={1}
-                                    max={4}
-                                    step={1}
-                                    size="small"
-                                />
-                            </Card>
-                        </Grid>
-
-                        {/* BOX 2: Operator Selection */}
-                        <Grid item xs={12} md={4}>
-                            <Card variant="outlined" sx={{ p: 2, textAlign: 'center', height: '100%' }}>
-                                <Typography variant="caption" fontWeight="bold" color="text.secondary" sx={{ mb: 1, display: 'block' }}>OPERATION</Typography>
-                                <ToggleButtonGroup
-                                    value={customOperator}
-                                    exclusive
-                                    onChange={(e, val) => { if(val) setCustomOperator(val); }}
-                                    size="large"
-                                    orientation="vertical"
-                                    sx={{ width: '100%' }}
-                                >
-                                    <ToggleButton value="addition" sx={{ py: 1 }}>
-                                        <Typography variant="h6" sx={{ mr: 1 }}>+</Typography> Add
-                                    </ToggleButton>
-                                    <ToggleButton value="subtraction" sx={{ py: 1 }}>
-                                        <Typography variant="h6" sx={{ mr: 1 }}>-</Typography> Subtract
-                                    </ToggleButton>
-                                    <ToggleButton value="multiplication" sx={{ py: 1 }}>
-                                        <Typography variant="h6" sx={{ mr: 1 }}>×</Typography> Multiply
-                                    </ToggleButton>
-                                    <ToggleButton value="division" sx={{ py: 1 }}>
-                                        <Typography variant="h6" sx={{ mr: 1 }}>÷</Typography> Divide
-                                    </ToggleButton>
-                                </ToggleButtonGroup>
-                            </Card>
-                        </Grid>
-
-                        {/* BOX 3: Digits for Operand 2 */}
-                        <Grid item xs={12} md={4}>
-                             <Card variant="outlined" sx={{ p: 2, textAlign: 'center', height: '100%' }}>
-                                <Typography variant="caption" fontWeight="bold" color="text.secondary">SECOND NUMBER</Typography>
-                                <Typography variant="h4" color="primary.main" sx={{ my: 1 }}>{digitCount2}</Typography>
-                                <Typography variant="body2" sx={{ mb: 2 }}>Digits</Typography>
-                                <Slider
-                                    value={digitCount2}
-                                    onChange={(e, v) => setDigitCount2(v)}
-                                    min={1}
-                                    max={4}
-                                    step={1}
-                                    size="small"
-                                />
-                            </Card>
-                        </Grid>
-                    </Grid>
-
-                    {/* Conditional Options */}
-                    {customOperator === 'subtraction' && (
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 1 }}>
-                             <Typography>Allow Negative Answers</Typography>
-                             <ToggleButtonGroup
-                                value={allowNegative}
-                                exclusive
-                                onChange={(e, val) => setAllowNegative(val)}
-                                size="small"
-                             >
-                                <ToggleButton value={false}>No</ToggleButton>
-                                <ToggleButton value={true}>Yes</ToggleButton>
-                             </ToggleButtonGroup>
-                        </Box>
-                    )}
-
-                    {customOperator === 'division' && (
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 1 }}>
-                             <Typography>Allow Decimals</Typography>
-                             <ToggleButtonGroup
-                                value={allowDecimal}
-                                exclusive
-                                onChange={(e, val) => setAllowDecimal(val)}
-                                size="small"
-                             >
-                                <ToggleButton value={false}>No</ToggleButton>
-                                <ToggleButton value={true}>Yes</ToggleButton>
-                             </ToggleButtonGroup>
-                        </Box>
-                    )}
-                </Stack>
-            )}
-
-            {/* 3. ADAPTIVE MODE SETTINGS (Original UI) */}
-            {practiceType === 'adaptive' && (
-              <Box>
-                <Typography gutterBottom fontWeight="bold">
-                  Select Topics
-                </Typography>
-                <ToggleButtonGroup
-                  value={selectedTopics}
-                  onChange={(e, newTopics) => {
-                    if (newTopics.length) setSelectedTopics(newTopics);
-                  }}
-                  aria-label="topics"
-                  fullWidth
-                  color="primary"
-                  sx={{ flexWrap: "wrap", gap: 1 }}
-                >
-                  {TOPICS.map((t) => (
-                    <ToggleButton
-                      key={t.value}
-                      value={t.value}
-                      sx={{ flexGrow: 1, py: 1.5 }}
-                    >
-                      <span style={{ display: 'flex', alignItems: 'center', marginRight: 8, fontSize: "1.3em" }}>
-                        {t.icon}
-                      </span>
-                      <Typography fontWeight="bold">{t.label}</Typography>
-                    </ToggleButton>
-                  ))}
-                </ToggleButtonGroup>
-                
-                <Box sx={{ mt: 3 }}>
-                    <Typography gutterBottom fontWeight="bold">
-                    Starting Difficulty: {difficulty}
-                    </Typography>
-                    <Slider
-                    value={difficulty}
-                    onChange={(e, v) => setDifficulty(v)}
-                    min={1.0}
-                    max={5.0}
-                    step={0.5}
-                    marks={[
-                        { value: 1.0, label: "Easy" },
-                        { value: 3.0, label: "Medium" },
-                        { value: 5.0, label: "Hard" },
-                    ]}
-                    valueLabelDisplay="auto"
-                    />
+        <Stack spacing={4}>
+          {/* MULTIPLAYER ARENA OPTION */}
+          <Card variant="outlined" sx={{
+            p: 3,
+            bgcolor: 'background.default',
+            border: '2px solid',
+            borderColor: theme.palette.secondary.main,
+            position: 'relative',
+            overflow: 'visible'
+          }}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} alignItems="center" justifyContent="space-between" spacing={2}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Box sx={{ p: 1.5, bgcolor: 'secondary.main', borderRadius: 2, color: 'white' }}>
+                  <Swords size={28} />
+                </Box>
+                <Box>
+                  <Typography variant="h6" fontWeight="bold">
+                    Multiplayer Arena
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Ready to battle? Challenge friends online!
+                  </Typography>
                 </Box>
               </Box>
-            )}
+              <Button
+                variant="contained"
+                color="secondary"
+                onClick={() => navigate('/multiplayer')}
+                startIcon={<Play />}
+                size="large"
+                sx={{ borderRadius: 3, px: 3, whiteSpace: 'nowrap' }}
+              >
+                Battle Now
+              </Button>
+            </Stack>
+          </Card>
+
+          {/* 1. Learning Mode Selector */}
+          <Box>
+            <Typography gutterBottom variant="h6" fontWeight="bold">Learning Mode</Typography>
+            <ToggleButtonGroup
+              value={practiceType}
+              exclusive
+              onChange={(e, val) => { if (val) setPracticeType(val); }}
+              fullWidth
+              sx={{ mb: 2 }}
+            >
+              <ToggleButton value="custom" color="primary" sx={{ py: 2 }}>
+                <Typography fontWeight="bold">Custom Practice</Typography>
+              </ToggleButton>
+              <ToggleButton value="adaptive" color="secondary" sx={{ py: 2 }}>
+                <Typography fontWeight="bold">Adaptive Learning</Typography>
+              </ToggleButton>
+            </ToggleButtonGroup>
+          </Box>
+
+          {/* 2. CUSTOM MODE SETTINGS - 3 BOX LAYOUT */}
+          {practiceType === 'custom' && (
+            <Stack spacing={3} sx={{ p: 3, bgcolor: 'background.default', borderRadius: 2 }}>
+
+              <Typography gutterBottom fontWeight="bold" variant="h6">Configure Problem</Typography>
+
+              <Grid container spacing={4} justifyContent="center" alignItems="center">
+                {/* BOX 1: Digits for Operand 1 */}
+                <Grid item xs={12} md={4}>
+                  <Card variant="outlined" sx={{ p: 2, textAlign: 'center', height: '100%' }}>
+                    <Typography variant="caption" fontWeight="bold" color="text.secondary">FIRST NUMBER</Typography>
+                    <Typography variant="h4" color="primary.main" sx={{ my: 1 }}>{digitCount1}</Typography>
+                    <Typography variant="body2" sx={{ mb: 2 }}>Digits</Typography>
+                    <Slider
+                      value={digitCount1}
+                      onChange={(e, v) => setDigitCount1(v)}
+                      min={1}
+                      max={4}
+                      step={1}
+                      size="small"
+                    />
+                  </Card>
+                </Grid>
+
+                {/* BOX 2: Operator Selection */}
+                <Grid item xs={12} md={4}>
+                  <Card variant="outlined" sx={{ p: 2, textAlign: 'center', height: '100%' }}>
+                    <Typography variant="caption" fontWeight="bold" color="text.secondary" sx={{ mb: 1, display: 'block' }}>OPERATION</Typography>
+                    <ToggleButtonGroup
+                      value={customOperator}
+                      exclusive
+                      onChange={(e, val) => { if (val) setCustomOperator(val); }}
+                      size="large"
+                      orientation="vertical"
+                      sx={{ width: '100%' }}
+                    >
+                      <ToggleButton value="addition" sx={{ py: 1 }}>
+                        <Typography variant="h6" sx={{ mr: 1 }}>+</Typography> Add
+                      </ToggleButton>
+                      <ToggleButton value="subtraction" sx={{ py: 1 }}>
+                        <Typography variant="h6" sx={{ mr: 1 }}>-</Typography> Subtract
+                      </ToggleButton>
+                      <ToggleButton value="multiplication" sx={{ py: 1 }}>
+                        <Typography variant="h6" sx={{ mr: 1 }}>×</Typography> Multiply
+                      </ToggleButton>
+                      <ToggleButton value="division" sx={{ py: 1 }}>
+                        <Typography variant="h6" sx={{ mr: 1 }}>÷</Typography> Divide
+                      </ToggleButton>
+                    </ToggleButtonGroup>
+                  </Card>
+                </Grid>
+
+                {/* BOX 3: Digits for Operand 2 */}
+                <Grid item xs={12} md={4}>
+                  <Card variant="outlined" sx={{ p: 2, textAlign: 'center', height: '100%' }}>
+                    <Typography variant="caption" fontWeight="bold" color="text.secondary">SECOND NUMBER</Typography>
+                    <Typography variant="h4" color="primary.main" sx={{ my: 1 }}>{digitCount2}</Typography>
+                    <Typography variant="body2" sx={{ mb: 2 }}>Digits</Typography>
+                    <Slider
+                      value={digitCount2}
+                      onChange={(e, v) => setDigitCount2(v)}
+                      min={1}
+                      max={4}
+                      step={1}
+                      size="small"
+                    />
+                  </Card>
+                </Grid>
+              </Grid>
+
+              {/* Conditional Options */}
+              {customOperator === 'subtraction' && (
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 1 }}>
+                  <Typography>Allow Negative Answers</Typography>
+                  <ToggleButtonGroup
+                    value={allowNegative}
+                    exclusive
+                    onChange={(e, val) => setAllowNegative(val)}
+                    size="small"
+                  >
+                    <ToggleButton value={false}>No</ToggleButton>
+                    <ToggleButton value={true}>Yes</ToggleButton>
+                  </ToggleButtonGroup>
+                </Box>
+              )}
+
+              {customOperator === 'division' && (
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 1 }}>
+                  <Typography>Allow Decimals</Typography>
+                  <ToggleButtonGroup
+                    value={allowDecimal}
+                    exclusive
+                    onChange={(e, val) => setAllowDecimal(val)}
+                    size="small"
+                  >
+                    <ToggleButton value={false}>No</ToggleButton>
+                    <ToggleButton value={true}>Yes</ToggleButton>
+                  </ToggleButtonGroup>
+                </Box>
+              )}
+            </Stack>
+          )}
+
+          {/* 3. ADAPTIVE MODE SETTINGS (Original UI) */}
+          {practiceType === 'adaptive' && (
+            <Box>
+              <Typography gutterBottom fontWeight="bold">
+                Select Topics
+              </Typography>
+              <ToggleButtonGroup
+                value={selectedTopics}
+                onChange={(e, newTopics) => {
+                  if (newTopics.length) setSelectedTopics(newTopics);
+                }}
+                aria-label="topics"
+                fullWidth
+                color="primary"
+                sx={{ flexWrap: "wrap", gap: 1 }}
+              >
+                {TOPICS.map((t) => (
+                  <ToggleButton
+                    key={t.value}
+                    value={t.value}
+                    sx={{ flexGrow: 1, py: 1.5 }}
+                  >
+                    <span style={{ display: 'flex', alignItems: 'center', marginRight: 8, fontSize: "1.3em" }}>
+                      {t.icon}
+                    </span>
+                    <Typography fontWeight="bold">{t.label}</Typography>
+                  </ToggleButton>
+                ))}
+              </ToggleButtonGroup>
+
+              <Box sx={{ mt: 3 }}>
+                <Typography gutterBottom fontWeight="bold">
+                  Starting Difficulty: {difficulty}
+                </Typography>
+                <Slider
+                  value={difficulty}
+                  onChange={(e, v) => setDifficulty(v)}
+                  min={1.0}
+                  max={5.0}
+                  step={0.5}
+                  marks={[
+                    { value: 1.0, label: "Easy" },
+                    { value: 3.0, label: "Medium" },
+                    { value: 5.0, label: "Hard" },
+                  ]}
+                  valueLabelDisplay="auto"
+                />
+              </Box>
+            </Box>
+          )}
 
           {/* Practice Mode Selection (Timer/Fixed) - AVAILABLE FOR BOTH */}
           <Box>
@@ -1280,13 +1306,12 @@ const Practice = () => {
                     textAlign: "center",
                     fontWeight: "bold",
                     border: "none",
-                    borderBottom: `5px solid ${
-                      answerFeedback === "correct"
+                    borderBottom: `5px solid ${answerFeedback === "correct"
                         ? theme.palette.success.main
                         : answerFeedback === "wrong"
-                        ? theme.palette.error.main
-                        : theme.palette.primary.main
-                    }`,
+                          ? theme.palette.error.main
+                          : theme.palette.primary.main
+                      }`,
                     width: "180px",
                     backgroundColor: "transparent",
                     padding: "0 15px",
@@ -1294,8 +1319,8 @@ const Practice = () => {
                       answerFeedback === "correct"
                         ? theme.palette.success.main
                         : answerFeedback === "wrong"
-                        ? theme.palette.error.main
-                        : theme.palette.primary.main,
+                          ? theme.palette.error.main
+                          : theme.palette.primary.main,
                     outline: "none",
                     height: "120px",
                     transition: "all 0.3s",
@@ -1303,14 +1328,14 @@ const Practice = () => {
                       answerFeedback === "correct"
                         ? `0 4px 20px ${theme.palette.success.main}40`
                         : answerFeedback === "wrong"
-                        ? `0 4px 20px ${theme.palette.error.main}40`
-                        : `0 4px 20px ${theme.palette.primary.main}20`,
+                          ? `0 4px 20px ${theme.palette.error.main}40`
+                          : `0 4px 20px ${theme.palette.primary.main}20`,
                     opacity: answerFeedback !== null ? 0.7 : 1,
                   }}
                 />
-                
+
                 {/* Voice Recognition Button */}
-                <Tooltip 
+                <Tooltip
                   title={!isSupported ? "Voice recognition not supported in this browser" : isListening ? "Listening... (click to stop)" : "Start voice input"}
                   arrow
                 >
@@ -1332,18 +1357,18 @@ const Practice = () => {
                         color: isListening ? theme.palette.success.main : theme.palette.primary.main,
                         animation: isListening ? "pulse 1.5s infinite" : "none",
                         "@keyframes pulse": {
-                          "0%, 100%": { 
+                          "0%, 100%": {
                             opacity: 1,
                             transform: "translateY(-50%) scale(1)",
                           },
-                          "50%": { 
+                          "50%": {
                             opacity: 0.7,
                             transform: "translateY(-50%) scale(1.15)",
                           },
                         },
                         "&:hover": {
-                          backgroundColor: isListening 
-                            ? `${theme.palette.success.main}20` 
+                          backgroundColor: isListening
+                            ? `${theme.palette.success.main}20`
                             : `${theme.palette.primary.main}20`,
                         },
                         "&.Mui-disabled": {
@@ -1358,21 +1383,21 @@ const Practice = () => {
 
                 {/* Voice Hint */}
                 {isListening && (
-                    <Typography 
-                        variant="caption" 
-                        sx={{ 
-                            position: 'absolute',
-                            bottom: -25,
-                            left: '50%',
-                            transform: 'translateX(-50%)',
-                            color: theme.palette.text.secondary,
-                            fontSize: '0.75rem',
-                            whiteSpace: 'nowrap',
-                            opacity: 0.8
-                        }}
-                    >
-                        Say "Clear" to reset
-                    </Typography>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      position: 'absolute',
+                      bottom: -25,
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      color: theme.palette.text.secondary,
+                      fontSize: '0.75rem',
+                      whiteSpace: 'nowrap',
+                      opacity: 0.8
+                    }}
+                  >
+                    Say "Clear" to reset
+                  </Typography>
                 )}
 
                 {answerFeedback === "wrong" && problem && (
@@ -1432,16 +1457,16 @@ const Practice = () => {
     const accuracy = totalQuestions > 0 ? (score / totalQuestions) * 100 : 0;
     const avgDifficulty = difficultyHistory.length
       ? (
-          difficultyHistory.reduce((a, b) => a + b, 0) /
-          difficultyHistory.length
-        ).toFixed(1)
+        difficultyHistory.reduce((a, b) => a + b, 0) /
+        difficultyHistory.length
+      ).toFixed(1)
       : 0;
     const improvement = sessionDifficulty - difficulty;
     const avgTime =
       timeHistory.length > 0
         ? (timeHistory.reduce((a, b) => a + b, 0) / timeHistory.length).toFixed(
-            1
-          )
+          1
+        )
         : 0;
 
     return (
@@ -1453,13 +1478,11 @@ const Practice = () => {
           p: 6,
           borderRadius: 4,
           boxShadow: theme.shadows[12],
-          background: `linear-gradient(135deg, ${
-            theme.palette.background.paper
-          } 0%, ${
-            theme.palette.mode === "dark"
+          background: `linear-gradient(135deg, ${theme.palette.background.paper
+            } 0%, ${theme.palette.mode === "dark"
               ? "rgba(25, 25, 35, 0.8)"
               : "rgba(245, 245, 255, 0.8)"
-          } 100%)`,
+            } 100%)`,
         }}
       >
         <Box

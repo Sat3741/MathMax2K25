@@ -35,13 +35,20 @@ const Navbar = () => {
         navigate('/profile');
     };
 
+    const handleLogoClick = (e) => {
+        if (e.detail === 3) {
+            e.preventDefault();
+            navigate('/admin');
+        }
+    };
+
     return (
-        <AppBar 
-            position="sticky" 
+        <AppBar
+            position="sticky"
             elevation={0}
-            sx={{ 
-                background: muiTheme.palette.mode === 'dark' 
-                    ? 'rgba(15, 23, 42, 0.8)' 
+            sx={{
+                background: muiTheme.palette.mode === 'dark'
+                    ? 'rgba(15, 23, 42, 0.8)'
                     : 'rgba(255, 255, 255, 0.8)',
                 backdropFilter: 'blur(20px)',
                 boxShadow: muiTheme.shadows[1],
@@ -53,11 +60,12 @@ const Navbar = () => {
             <Container maxWidth="xl">
                 <Toolbar sx={{ minHeight: { xs: 70, md: 80 }, py: 1, justifyContent: 'space-between', px: { xs: 2, md: 0 } }}>
                     {/* Logo Section */}
-                    <Box 
+                    <Box
                         component={Link}
                         to="/"
-                        sx={{ 
-                            display: 'flex', 
+                        onClick={handleLogoClick}
+                        sx={{
+                            display: 'flex',
                             alignItems: 'center',
                             gap: 2,
                             textDecoration: 'none',
@@ -100,10 +108,10 @@ const Navbar = () => {
 
                     {/* Navigation Section */}
                     <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
-                        <IconButton 
-                            onClick={toggleTheme} 
+                        <IconButton
+                            onClick={toggleTheme}
                             color="inherit"
-                            sx={{ 
+                            sx={{
                                 '&:hover': {
                                     backgroundColor: muiTheme.palette.action.hover,
                                 }

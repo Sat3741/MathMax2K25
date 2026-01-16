@@ -270,7 +270,17 @@ class UserPasswordResetView(APIView):
         
         try:
             user = User.objects.get(pk=pk)
-            new_password = generate_password()
+            
+            # Check if a custom password is provided in the request
+            custom_password = request.data.get('password')
+            
+            if custom_password:
+                # Use the custom password provided
+                new_password = custom_password
+            else:
+                # Generate a random password if none provided
+                new_password = generate_password()
+            
             user.set_password(new_password)
             user.save()
             
@@ -279,12 +289,17 @@ class UserPasswordResetView(APIView):
                 'username': user.username,
                 'password': new_password,
                 'message': 'Password reset successfully'
-            })
+            }, status=status.HTTP_200_OK)
         except User.DoesNotExist:
             return Response({
                 'success': False,
                 'message': 'User not found'
-            }, status=404)
+            }, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({
+                'success': False,
+                'message': f'Error resetting password: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class BulkPromoteView(APIView):

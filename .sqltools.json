@@ -1,0 +1,17 @@
+{
+  "connections": [
+    {
+      "name": "MathMax PostgreSQL",
+      "driver": "PostgreSQL",
+      "server": "localhost",
+      "port": 5432,
+      "database": "mathmax_db",
+      "username": "mathmax_user",
+      "password": "mathmax_password",
+      "connectionTimeout": 30,
+      "previewLimit": 50
+    }
+  ]
+}
+
+
